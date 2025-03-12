@@ -1,0 +1,172 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tournament {
+  id          Int      @id @default(autoincrement())
+  year        Int
+  name        String
+  entryFee    Float
+  currentRound String
+  regions     String[] // PostgreSQL supports array types
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  teams       Team[]
+  games       Game[]
+  participants Participant[]
+}
+
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String
+  seed        Int
+  region      String
+  eliminated  Boolean  @default(false)
+  tournamentId Int
+  tournament  Tournament @relation(fields: [tournamentId], references: [id])
+  
+  // Keep existing Game relations
+  team1Games  Game[]   @relation("Team1")
+  team2Games  Game[]   @relation("Team2")
+  wonGames    Game[]   @relation("Winner")
+  
+  // Keep existing pick relations
+  finalFourPicks  FinalFourPick[]
+  finalsPicks     FinalsPick[]
+  championPicks   ChampionPick[]
+  cinderellaPicks CinderellaPick[]
+  gamePicks       GamePick[]
+  
+  // NEW Match relations (properly defined)
+  asTeam1Matches Match[] @relation("MatchTeam1")
+  asTeam2Matches Match[] @relation("MatchTeam2")
+  asWinnerMatches Match[] @relation("MatchWinner")
+}
+
+model Game {
+  id          Int      @id @default(autoincrement())
+  round       String
+  region      String
+  team1Id     Int
+  team2Id     Int
+  winnerId    Int?
+  team1Score  Int?
+  team2Score  Int?
+  completed   Boolean  @default(false)
+  tournamentId Int
+  
+  tournament  Tournament @relation(fields: [tournamentId], references: [id])
+  team1       Team       @relation("Team1", fields: [team1Id], references: [id])
+  team2       Team       @relation("Team2", fields: [team2Id], references: [id])
+  winner      Team?      @relation("Winner", fields: [winnerId], references: [id])
+  
+  gamePicks   GamePick[]
+}
+
+model Participant {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String
+  paid        Boolean  @default(false)
+  totalScore  Int      @default(0)
+  tournamentId Int
+  
+  tournament  Tournament @relation(fields: [tournamentId], references: [id])
+  
+  preTournamentPick PreTournamentPick?
+  gamePicks   GamePick[]
+}
+
+model PreTournamentPick {
+  id            Int      @id @default(autoincrement())
+  participantId Int      @unique
+  participant   Participant @relation(fields: [participantId], references: [id])
+  score         Int      @default(0)
+  
+  finalFourPicks   FinalFourPick[]
+  finalsPicks      FinalsPick[]
+  championPick     ChampionPick?
+  cinderellaPicks  CinderellaPick[]
+}
+
+model FinalFourPick {
+  id                 Int      @id @default(autoincrement())
+  preTournamentPickId Int
+  teamId             Int
+  
+  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id])
+  team               Team              @relation(fields: [teamId], references: [id])
+  
+  @@unique([preTournamentPickId, teamId])
+}
+
+model FinalsPick {
+  id                 Int      @id @default(autoincrement())
+  preTournamentPickId Int
+  teamId             Int
+  
+  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id])
+  team               Team              @relation(fields: [teamId], references: [id])
+  
+  @@unique([preTournamentPickId, teamId])
+}
+
+model ChampionPick {
+  id                 Int      @id @default(autoincrement())
+  preTournamentPickId Int     @unique
+  teamId             Int
+  
+  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id])
+  team               Team              @relation(fields: [teamId], references: [id])
+}
+
+model CinderellaPick {
+  id                 Int      @id @default(autoincrement())
+  preTournamentPickId Int
+  teamId             Int
+  
+  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id])
+  team               Team              @relation(fields: [teamId], references: [id])
+  
+  @@unique([preTournamentPickId, teamId])
+}
+
+model GamePick {
+  id            Int      @id @default(autoincrement())
+  participantId Int
+  gameId        Int
+  teamId        Int
+  correct       Boolean? // Will be set when game is completed
+  roundScore    Int      @default(0)
+  
+  participant   Participant @relation(fields: [participantId], references: [id])
+  game          Game        @relation(fields: [gameId], references: [id])
+  team          Team        @relation(fields: [teamId], references: [id])
+  
+  @@unique([participantId, gameId])
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  round     Int
+  region    String
+  team1Id   Int
+  team2Id   Int
+  winnerId  Int?
+  
+  // Relations to Team model (with FIXED relation names)
+  team1     Team     @relation("MatchTeam1", fields: [team1Id], references: [id])
+  team2     Team     @relation("MatchTeam2", fields: [team2Id], references: [id])
+  winner    Team?    @relation("MatchWinner", fields: [winnerId], references: [id])
+  
+  @@map("matches") // Optional: if you want the table name to be "matches" in DB
+}
