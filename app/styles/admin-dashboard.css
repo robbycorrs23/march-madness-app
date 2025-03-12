@@ -1,10 +1,11 @@
-i/* app/styles/admin-dashboard.css */
+/* app/styles/admin-dashboard.css - Updated for horizontal navigation */
 
 .admin-dashboard-container {
   min-height: 100vh;
   background-color: #f3f4f6;
 }
 
+/* Header styles */
 .admin-header {
   background-color: #1e293b;
   color: white;
@@ -54,60 +55,75 @@ i/* app/styles/admin-dashboard.css */
   background-color: #b91c1c;
 }
 
-.admin-main-content {
+/* Navigation styles - Horizontal */
+.admin-nav {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.admin-nav-container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
-}
-
-.admin-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .admin-layout {
-    flex-direction: row;
-  }
-}
-
-.admin-sidebar {
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  padding: 1rem;
-  height: fit-content;
-  width: 100%;
-}
-
-@media (min-width: 768px) {
-  .admin-sidebar {
-    width: 25%;
-  }
+  padding: 0 1rem;
 }
 
 .admin-nav-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.admin-nav-list::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
 }
 
 .admin-nav-item {
-  width: 100%;
-  text-align: left;
-  padding: 0.625rem 1rem;
-  border-radius: 0.25rem;
-  transition: background-color 0.2s;
+  display: inline-block;
 }
 
-.admin-nav-item:hover:not(.admin-nav-active) {
-  background-color: #f3f4f6;
+.admin-nav-button {
+  display: inline-block;
+  padding: 1rem 1.25rem;
+  font-weight: 500;
+  color: #4b5563;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.admin-nav-button:hover {
+  color: #111827;
+  background-color: rgba(0, 0, 0, 0.025);
 }
 
 .admin-nav-active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.admin-nav-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
   background-color: #2563eb;
-  color: white;
+}
+
+/* Main content styles */
+.admin-main-content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
 }
 
 .admin-content-area {
@@ -116,12 +132,6 @@ i/* app/styles/admin-dashboard.css */
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   padding: 1.5rem;
   width: 100%;
-}
-
-@media (min-width: 768px) {
-  .admin-content-area {
-    width: 75%;
-  }
 }
 
 .admin-section-title {

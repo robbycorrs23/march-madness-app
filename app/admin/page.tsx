@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AdminHeader from '../components/admin/AdminHeader';
-import AdminSidebar from '../components/admin/AdminSidebar';
+import AdminNavigation from '../components/admin/AdminNavigation';
 import DashboardOverview from '../components/admin/DashboardOverview';
 import TournamentManagement from '../components/admin/TournamentManagement';
 import ParticipantManagement from '../components/admin/ParticipantManagement';
@@ -159,36 +159,30 @@ export default function AdminDashboard() {
   return (
     <div className="admin-dashboard-container">
       <AdminHeader />
+      <AdminNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <div className="admin-main-content">
-        <div className="admin-layout">
-          <AdminSidebar 
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
+        <main className="admin-content-area">
+          {error && (
+            <div className="admin-error-alert">
+              {error}
+            </div>
+          )}
           
-          <main className="admin-content-area">
-            {error && (
-              <div className="admin-error-alert">
-                {error}
-              </div>
-            )}
-            
-            {success && (
-              <div className="admin-alert-success">
-                {success}
-              </div>
-            )}
-            
-            {loading ? (
-              <div className="admin-loading-spinner">
-                <div className="admin-spinner"></div>
-              </div>
-            ) : (
-              renderActiveTab()
-            )}
-          </main>
-        </div>
+          {success && (
+            <div className="admin-alert-success">
+              {success}
+            </div>
+          )}
+          
+          {loading ? (
+            <div className="admin-loading-spinner">
+              <div className="admin-spinner"></div>
+            </div>
+          ) : (
+            renderActiveTab()
+          )}
+        </main>
       </div>
     </div>
   );
