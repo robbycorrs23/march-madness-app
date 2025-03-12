@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 // Define TypeScript interfaces
 interface Participant {
-  id: number;
+  id: string | number;
   name: string;
   email: string;
   paid: boolean;
