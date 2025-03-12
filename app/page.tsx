@@ -99,7 +99,7 @@ export default function Home() {
     <main className="min-h-screen">
       <header className="site-header">
         <div className="container">
-          <div className="flex justify-between items-center">
+          <div className="header-content">
             <div className="site-logo-wrapper">
               <div className="basketball-icon">🏀</div>
               <h1>March Madness Fantasy 2025</h1>

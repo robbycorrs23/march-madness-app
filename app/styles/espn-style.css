@@ -125,10 +125,10 @@
     top: 0;
     z-index: 1000;
     box-shadow: var(--shadow-md);
-    height: 70px;
+    height: auto;
     display: flex;
     align-items: center;
-    padding: 1rem 0;
+    padding: 2rem 0;
   }
   
   .site-header::before {
@@ -150,6 +150,12 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: -0.03em;
+  }
+
+  .header-content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
   }
   
   .site-logo-wrapper {
