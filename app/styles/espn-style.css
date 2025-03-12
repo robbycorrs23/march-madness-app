@@ -47,7 +47,11 @@
     margin: 0;
     padding: 0;
   }
-  
+ 
+ html, body {
+    height: 100%;
+  }
+
   html {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
@@ -61,8 +65,17 @@
     color: var(--neutral-dark);
     line-height: 1.5;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
   }
   
+  main {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensures main content takes at least full viewport height */
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
@@ -91,7 +104,7 @@
     width: 100%;
     max-width: 1280px;
     margin: 0 auto;
-    padding: 0 1.25rem;
+    padding: 0 1.5rem;
   }
   
   .row {
@@ -115,6 +128,7 @@
     height: 70px;
     display: flex;
     align-items: center;
+    padding: 1rem 0;
   }
   
   .site-header::before {
@@ -141,7 +155,17 @@
   .site-logo-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
+  }
+
+  .site-content {
+    flex: 1 0 auto; /* This allows the content to grow and push footer down */
+  }
+
+  .site-footer {
+    flex-shrink: 0; /* Prevents the footer from shrinking */
+    width: 100%;
+    margin-top: auto; /* Pushes footer to the bottom when content is short */
   }
   
   .basketball-icon {
@@ -164,7 +188,7 @@
     40% {transform: translateY(-8px);}
     60% {transform: translateY(-4px);}
   }
-  
+
   /* NAVIGATION TABS */
   .nav-tabs {
     background-color: #003366;
@@ -183,6 +207,7 @@
   .nav-tabs-container {
     display: flex;
     position: relative;
+    padding: 0 0.5rem;
   }
   
   .nav-tabs-container::after {
