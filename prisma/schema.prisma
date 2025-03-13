@@ -19,10 +19,13 @@ model Tournament {
   regions     String[] // PostgreSQL supports array types
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
   teams       Team[]
   games       Game[]
   participants Participant[]
+
+  // Updated relation field
+  managedBy    User?    @relation("UserManagedTournaments", fields: [managedById], references: [id])
+  managedById  Int?
 }
 
 model Team {
@@ -169,4 +172,17 @@ model Match {
   winner    Team?    @relation("MatchWinner", fields: [winnerId], references: [id])
   
   @@map("matches") // Optional: if you want the table name to be "matches" in DB
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  name        String?
+  password    String
+  isAdmin     Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Updated relation field with named relation
+  managedTournaments Tournament[] @relation("UserManagedTournaments")
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from "../../../lib/auth";
 import { prisma } from '../../../lib/prisma';
 
 // GET /api/tournament - Get current tournament
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 // POST /api/tournament - Create new tournament (admin only)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     
     if (!session?.user?.isAdmin) {
       return NextResponse.json(
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/tournament - Update tournament (admin only)
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     
     if (!session?.user?.isAdmin) {
       return NextResponse.json(

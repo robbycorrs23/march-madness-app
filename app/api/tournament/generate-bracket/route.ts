@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from "../../../../lib/auth";
 import { prisma } from '../../../../lib/prisma';
 
 // Define types for better type safety
@@ -24,7 +24,7 @@ type BracketEntry = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
 
     if (!session?.user?.isAdmin) {
       return NextResponse.json(

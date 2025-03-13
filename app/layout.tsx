@@ -1,21 +1,27 @@
-import './globals.css';
-import './styles/espn-style.css';  // Import our ESPN-style CSS
+// app/layout.tsx
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
 import { SessionProvider } from './providers/SessionProvider';
+import './globals.css';
 
-export const metadata = {
-  title: 'March Madness Fantasy 2025',
-  description: 'Fantasy competition for March Madness tournament',
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata: Metadata = {
+  title: 'March Madness App',
+  description: 'Tournament Management Application',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body>
-        <SessionProvider>{children}</SessionProvider>
+      <body className={inter.className}>
+        <SessionProvider>
+          {children}
+        </SessionProvider>
       </body>
     </html>
   );

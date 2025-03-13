@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from "../../../../lib/auth";
 import { prisma } from '../../../../lib/prisma';
 
 // Define type for Game object
@@ -27,7 +27,7 @@ interface RegionWinners {
 // POST /api/tournament/generate-next-round - Generate next round games (admin only)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user?.isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized' },

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import AuthWrapper from '../components/AuthWrapper';
 import AdminHeader from '../components/admin/AdminHeader';
 import AdminNavigation from '../components/admin/AdminNavigation';
 import DashboardOverview from '../components/admin/DashboardOverview';
@@ -157,6 +158,7 @@ export default function AdminDashboard() {
   };
 
   return (
+  <AuthWrapper adminOnly>
     <div className="admin-dashboard-container">
       <AdminHeader />
       <AdminNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -185,5 +187,6 @@ export default function AdminDashboard() {
         </main>
       </div>
     </div>
+  </AuthWrapper>
   );
 }

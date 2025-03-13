@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from "../../../../lib/auth";
 import { prisma } from '../../../../lib/prisma';
 
 // POST /api/tournament/advance-round - Advance to next round (admin only)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     
     if (!session?.user?.isAdmin) {
       return NextResponse.json(

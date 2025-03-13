@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from "../../../lib/auth";
 import { prisma } from '../../../lib/prisma';
 
 // GET /api/participants - Get all participants (admin only)
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     
-    if (!session?.user?.isAdmin) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
     // Get the current tournament
