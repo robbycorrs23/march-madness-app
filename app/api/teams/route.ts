@@ -49,3 +49,24 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Add this GET function to your existing file
+export async function GET() {
+  try {
+    // Fetch all teams from the database
+    const teams = await prisma.team.findMany({
+      orderBy: [
+        { region: 'asc' },
+        { seed: 'asc' }
+      ]
+    });
+    
+    return NextResponse.json(teams);
+  } catch (error) {
+    console.error('Error fetching teams:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch teams' },
+      { status: 500 }
+    );
+  }
+}

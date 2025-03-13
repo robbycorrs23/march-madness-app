@@ -5,12 +5,30 @@ import { prisma } from '../../../lib/prisma';
 // GET /api/tournament - Get current tournament
 export async function GET(req: NextRequest) {
   try {
-    // Get the most recent tournament
+    // Get the most recent tournament, explicitly selecting fields
     const tournament = await prisma.tournament.findFirst({
       orderBy: {
         createdAt: 'desc',
       },
+      select: {
+        id: true,
+        name: true,
+        year: true,
+        entryFee: true,
+        currentRound: true,
+        regions: true,
+        createdAt: true,
+        updatedAt: true
+        // Excluding managedById which doesn't exist in the database
+      }
     });
+    
+    if (!tournament) {
+      return NextResponse.json(
+        { message: 'No tournament found' },
+        { status: 404 }
+      );
+    }
     
     return NextResponse.json(tournament);
   } catch (error) {

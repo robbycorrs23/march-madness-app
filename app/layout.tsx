@@ -1,8 +1,8 @@
-// app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { SessionProvider } from './providers/SessionProvider';
-import './globals.css';
+import './styles/espn-style.css'; // Updated import path
+import './globals.css'; // Keep this if you want to use Tailwind or other global styles
 
 const inter = Inter({ subsets: ['latin'] });
 

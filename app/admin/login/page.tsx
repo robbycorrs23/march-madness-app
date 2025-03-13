@@ -19,6 +19,7 @@ export default function AdminLogin() {
         password,
         redirect: false,
       });
+
       if (result?.error) {
         setError('Invalid password');
       } else {
@@ -42,7 +43,6 @@ export default function AdminLogin() {
             </div>
           </Link>
         </div>
-
         <div className="card">
           <div className="card-accent-top"></div>
           <div className="card-header">

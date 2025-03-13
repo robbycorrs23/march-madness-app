@@ -22,10 +22,6 @@ model Tournament {
   teams       Team[]
   games       Game[]
   participants Participant[]
-
-  // Updated relation field
-  managedBy    User?    @relation("UserManagedTournaments", fields: [managedById], references: [id])
-  managedById  Int?
 }
 
 model Team {
@@ -182,7 +178,4 @@ model User {
   isAdmin     Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
-  // Updated relation field with named relation
-  managedTournaments Tournament[] @relation("UserManagedTournaments")
 }
