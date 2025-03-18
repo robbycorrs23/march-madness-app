@@ -2,582 +2,280 @@
 import { useState, useEffect } from 'react';
 
 // Define TypeScript interfaces
-interface Tournament {
-  id: number;
-  currentRound: string;
-  // Add other tournament properties as needed
-}
-
 interface Team {
   id: number;
   name: string;
   seed: number;
-  region: string;
-  eliminated?: boolean;
 }
 
-interface Game {
+interface Match {
   id: number;
-  round: string;
-  region: string;
-  team1Id: number;
-  team2Id: number;
+  team1: Team;
+  team2: Team;
   winnerId?: number | null;
+  team1Score?: number | null;
+  team2Score?: number | null;
+  completed: boolean;
 }
 
-interface UserInfo {
-  name: string;
-  email: string;
+interface Tournament {
+  id: number;
+  currentRound: string;
 }
 
-interface PreTournamentPicks {
-  finalFour: string[];
-  finals: string[];
-  champion: string;
-  cinderellas: string[];
+interface Pick {
+  matchId: number;
+  teamId: number;
+  teamName: string;
+  teamSeed: number;
+  correct: boolean | null;
 }
 
-interface RoundPicks {
-  [gameId: string]: string;
+interface ParticipantPicks {
+  participantId: number;
+  participantName: string;
+  totalScore: number;
+  picks: Pick[];
 }
 
-const PickSubmissionForm = () => {
-  const [step, setStep] = useState('user-info');
+interface PublicPicksResponse {
+  showPicks: boolean;
+  tournament: Tournament;
+  matches: Match[];
+  participants: ParticipantPicks[];
+  message?: string;
+}
+
+const UserPicksDisplay = () => {
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [games, setGames] = useState<Game[]>([]);
-  const [userInfo, setUserInfo] = useState<UserInfo>({
-    name: '',
-    email: ''
-  });
-  const [preTournamentPicks, setPreTournamentPicks] = useState<PreTournamentPicks>({
-    finalFour: ['', '', '', ''],
-    finals: ['', ''],
-    champion: '',
-    cinderellas: ['', '']
-  });
-  const [roundPicks, setRoundPicks] = useState<RoundPicks>({});
+  const [picksData, setPicksData] = useState<PublicPicksResponse | null>(null);
+  const [currentRound, setCurrentRound] = useState('Round of 64');
 
-  // Load tournament data, teams, and games
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch tournament
-        const tournamentResponse = await fetch('/api/tournament');
-        if (tournamentResponse.ok) {
-          const tournamentData = await tournamentResponse.json();
-          setTournament(tournamentData);
-        }
-        // Fetch teams
-        const teamsResponse = await fetch('/api/teams');
-        if (teamsResponse.ok) {
-          const teamsData = await teamsResponse.json();
-          setTeams(teamsData);
-        }
-        // Fetch current round games if tournament exists
-        if (tournament?.currentRound && tournament.currentRound !== 'Pre-Tournament') {
-          const gamesResponse = await fetch(`/api/games?round=${tournament.currentRound}`);
-          if (gamesResponse.ok) {
-            const gamesData = await gamesResponse.json();
-            setGames(gamesData);
-            // Initialize round picks
-            const initialRoundPicks: RoundPicks = {};
-            gamesData.forEach((game: Game) => {
-              initialRoundPicks[game.id] = '';
-            });
-            setRoundPicks(initialRoundPicks);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load necessary data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [tournament?.currentRound]);
+  const rounds = [
+    'Round of 64',
+    'Round of 32',
+    'Sweet 16',
+    'Elite 8',
+    'Final Four',
+    'Championship'
+  ];
 
-  // Handle user info changes
-  const handleUserInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserInfo(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handle pre-tournament pick changes
-  const handleFinalFourChange = (index: number, teamId: string) => {
-    const newFinalFour = [...preTournamentPicks.finalFour];
-    newFinalFour[index] = teamId;
-    setPreTournamentPicks(prev => ({
-      ...prev,
-      finalFour: newFinalFour
-    }));
-  };
-  
-  const handleFinalsChange = (index: number, teamId: string) => {
-    const newFinals = [...preTournamentPicks.finals];
-    newFinals[index] = teamId;
-    setPreTournamentPicks(prev => ({
-      ...prev,
-      finals: newFinals
-    }));
-  };
-  
-  const handleChampionChange = (teamId: string) => {
-    setPreTournamentPicks(prev => ({
-      ...prev,
-      champion: teamId
-    }));
-  };
-  
-  const handleCinderellaChange = (index: number, teamId: string) => {
-    const newCinderellas = [...preTournamentPicks.cinderellas];
-    newCinderellas[index] = teamId;
-    setPreTournamentPicks(prev => ({
-      ...prev,
-      cinderellas: newCinderellas
-    }));
-  };
-
-  // Handle round pick changes
-  const handleRoundPickChange = (gameId: number, teamId: string) => {
-    setRoundPicks(prev => ({
-      ...prev,
-      [gameId]: teamId
-    }));
-  };
-
-  // Move to next step
-  const goToNextStep = () => {
-    if (step === 'user-info') {
-      if (!userInfo.name || !userInfo.email) {
-        setError('Please provide your name and email');
-        return;
-      }
-      setStep('pre-tournament');
-      setError('');
-    } else if (step === 'pre-tournament') {
-      // Validate pre-tournament picks
-      if (!preTournamentPicks.finalFour.every(pick => pick) ||
-          !preTournamentPicks.finals.every(pick => pick) ||
-          !preTournamentPicks.champion ||
-          !preTournamentPicks.cinderellas.every(pick => pick)) {
-        setError('Please complete all pre-tournament picks');
-        return;
-      }
-      if (tournament?.currentRound && tournament.currentRound !== 'Pre-Tournament') {
-        setStep('round-picks');
-      } else {
-        submitPicks();
-      }
-      setError('');
-    }
-  };
-
-  // Go back to previous step
-  const goToPreviousStep = () => {
-    if (step === 'pre-tournament') {
-      setStep('user-info');
-    } else if (step === 'round-picks') {
-      setStep('pre-tournament');
-    }
-    setError('');
-  };
-
-  // Submit all picks
-  const submitPicks = async () => {
-    if (!tournament) return;
-    
-    setSubmitting(true);
-    setError('');
+  // Fetch data for the selected round
+  const fetchRoundData = async (round: string) => {
     try {
-      // Prepare the payload
-      const payload: any = {
-        tournamentId: tournament.id,
-        participant: userInfo,
-        preTournament: preTournamentPicks
-      };
+      setLoading(true);
       
-      // Add round picks if applicable
-      if (step === 'round-picks') {
-        payload.roundPicks = {
-          round: tournament.currentRound,
-          picks: Object.entries(roundPicks).map(([gameId, teamId]) => ({
-            gameId: parseInt(gameId),
-            teamId
-          }))
-        };
-      }
-      
-      // Submit picks
-      const response = await fetch('/api/picks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      
+      const response = await fetch(`/api/public/picks?round=${round}`);
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit picks');
+        throw new Error('Failed to fetch picks data');
       }
       
-      setSuccess('Your picks have been submitted successfully!');
+      const data = await response.json();
+      setPicksData(data);
       
-      // Reset form after successful submission
-      setTimeout(() => {
-        setUserInfo({ name: '', email: '' });
-        setPreTournamentPicks({
-          finalFour: ['', '', '', ''],
-          finals: ['', ''],
-          champion: '',
-          cinderellas: ['', '']
-        });
-        setRoundPicks({});
-        setStep('user-info');
-      }, 3000);
+      // If tournament has a current round, update the selector
+      if (data.tournament?.currentRound && rounds.includes(data.tournament.currentRound)) {
+        setCurrentRound(data.tournament.currentRound);
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error));
+      console.error('Error fetching picks data:', error);
+      setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
+  };
+
+  // Initial data load
+  useEffect(() => {
+    fetchRoundData(currentRound);
+  }, []);
+
+  // Handle round change
+  const handleRoundChange = (round: string) => {
+    setCurrentRound(round);
+    fetchRoundData(round);
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center p-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="user_picks_loading">
+        <div className="user_picks_spinner"></div>
+        <p>Loading picks data...</p>
       </div>
     );
   }
 
-  if (!tournament) {
+  if (error) {
     return (
-      <div className="bg-yellow-50 border border-yellow-400 text-yellow-700 p-4 rounded">
-        <p>The tournament has not been set up yet. Please check back later.</p>
+      <div className="user_picks_error">
+        <p>Error: {error}</p>
+        <button className="user_picks_retry_button" onClick={() => fetchRoundData(currentRound)}>
+          Retry
+        </button>
       </div>
     );
   }
 
-  // Group teams by region
-  const teamsByRegion: { [region: string]: Team[] } = {};
-  teams.forEach(team => {
-    if (!teamsByRegion[team.region]) {
-      teamsByRegion[team.region] = [];
-    }
-    teamsByRegion[team.region].push(team);
-  });
+  if (!picksData) {
+    return (
+      <div className="user_picks_no_tournament">
+        <p>No tournament data available. Please check back later.</p>
+      </div>
+    );
+  }
 
-  // Get Cinderella eligible teams (seeds 11-16)
-  const cinderellaTeams = teams.filter(team => team.seed >= 11 && team.seed <= 16);
+  // Check tournament status
+  if (picksData.tournament?.currentRound === 'Pre-Tournament') {
+    return (
+      <div className="user_picks_container">
+        <h2 className="user_picks_title">All Participants' Picks</h2>
+        <div className="user_picks_pre_tournament">
+          <p>The tournament has not started yet. Picks will be visible once the tournament begins.</p>
+          <p>Current tournament status: <strong>Pre-Tournament</strong></p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if picks should be shown
+  if (!picksData.showPicks) {
+    return (
+      <div className="user_picks_container">
+        <h2 className="user_picks_title">All Participants' Picks</h2>
+        
+        <div className="user_picks_round_selector">
+          <label htmlFor="round-select" className="user_picks_label">Round:</label>
+          <select 
+            id="round-select"
+            className="user_picks_select"
+            value={currentRound}
+            onChange={(e) => handleRoundChange(e.target.value)}
+          >
+            {rounds.map(round => (
+              <option key={round} value={round}>{round}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="user_picks_locked_message">
+          <p>Picks for {currentRound} are not visible yet. They will be revealed once the tournament begins.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {success}
-        </div>
-      )}
-      <div className="mb-6">
-        <div className="flex items-center mb-4">
-          <div className={`rounded-full h-8 w-8 flex items-center justify-center mr-3 ${
-            step === 'user-info' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}>
-            1
-          </div>
-          <div className={`h-1 flex-grow mx-2 ${
-            step === 'user-info' ? 'bg-blue-600' : 'bg-gray-300'
-          }`}></div>
-          <div className={`rounded-full h-8 w-8 flex items-center justify-center mx-3 ${
-            step === 'pre-tournament' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-          }`}>
-            2
-          </div>
-          {(tournament?.currentRound && tournament.currentRound !== 'Pre-Tournament') && (
-            <>
-              <div className={`h-1 flex-grow mx-2 ${
-                step === 'round-picks' ? 'bg-blue-600' : 'bg-gray-300'
-              }`}></div>
-              <div className={`rounded-full h-8 w-8 flex items-center justify-center ml-3 ${
-                step === 'round-picks' ? 'bg-blue-600 text-white' : 'bg-gray-300'
-              }`}>
-                3
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex justify-between">
-          <div className="text-center">
-            <span className="text-sm font-medium">Your Info</span>
-          </div>
-          <div className="text-center">
-            <span className="text-sm font-medium">Pre-Tournament Picks</span>
-          </div>
-          {(tournament?.currentRound && tournament.currentRound !== 'Pre-Tournament') && (
-            <div className="text-center">
-              <span className="text-sm font-medium">{tournament.currentRound} Picks</span>
-            </div>
-          )}
-        </div>
+    <div className="user_picks_container">
+      <h2 className="user_picks_title">All Participants' Picks</h2>
+      
+      <div className="user_picks_round_selector">
+        <label htmlFor="round-select" className="user_picks_label">Round:</label>
+        <select 
+          id="round-select"
+          className="user_picks_select"
+          value={currentRound}
+          onChange={(e) => handleRoundChange(e.target.value)}
+        >
+          {rounds.map(round => (
+            <option key={round} value={round}>{round}</option>
+          ))}
+        </select>
       </div>
-      {step === 'user-info' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Your Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={userInfo.name}
-                onChange={handleUserInfoChange}
-                className="w-full p-2 border rounded"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={userInfo.email}
-                onChange={handleUserInfoChange}
-                className="w-full p-2 border rounded"
-                required
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Your email will be used to identify your picks.
-              </p>
-            </div>
-            <div className="pt-4">
-              <button
-                onClick={goToNextStep}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-              >
-                Continue to Picks
-              </button>
-            </div>
-          </div>
+      
+      {picksData.matches.length === 0 ? (
+        <div className="user_picks_no_matches">
+          <p>No matches found for {currentRound}.</p>
         </div>
-      )}
-      {step === 'pre-tournament' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Pre-Tournament Picks</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-medium mb-2">Final Four Teams (5 pts each)</h3>
-              <div className="space-y-2">
-                {preTournamentPicks.finalFour.map((teamId, index) => (
-                  <div key={`ff-${index}`}>
-                    <select
-                      value={teamId}
-                      onChange={(e) => handleFinalFourChange(index, e.target.value)}
-                      className="w-full p-2 border rounded"
-                      required
-                    >
-                      <option value="">-- Select Team {index + 1} --</option>
-                      {Object.entries(teamsByRegion).map(([region, regionTeams]) => (
-                        <optgroup key={region} label={region}>
-                          {regionTeams
-                            .sort((a, b) => a.seed - b.seed)
-                            .map(team => (
-                              <option key={team.id} value={team.id.toString()}>
-                                ({team.seed}) {team.name}
-                              </option>
-                            ))
-                          }
-                        </optgroup>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h3 className="font-medium mb-2">Finals Teams (10 pts each)</h3>
-              <div className="space-y-2">
-                {preTournamentPicks.finals.map((teamId, index) => (
-                  <div key={`finals-${index}`}>
-                    <select
-                      value={teamId}
-                      onChange={(e) => handleFinalsChange(index, e.target.value)}
-                      className="w-full p-2 border rounded"
-                      required
-                    >
-                      <option value="">-- Select Team {index + 1} --</option>
-                      {teams
-                        .sort((a, b) => a.seed - b.seed || a.name.localeCompare(b.name))
-                        .map(team => (
-                          <option key={team.id} value={team.id.toString()}>
-                            ({team.seed}) {team.name} - {team.region}
-                          </option>
-                        ))
-                      }
-                    </select>
-                  </div>
-                ))}
-              </div>
-              <h3 className="font-medium mb-2 mt-6">Champion (25 pts)</h3>
-              <select
-                value={preTournamentPicks.champion}
-                onChange={(e) => handleChampionChange(e.target.value)}
-                className="w-full p-2 border rounded"
-                required
-              >
-                <option value="">-- Select Champion --</option>
-                {teams
-                  .sort((a, b) => a.seed - b.seed || a.name.localeCompare(b.name))
-                  .map(team => (
-                    <option key={team.id} value={team.id.toString()}>
-                      ({team.seed}) {team.name} - {team.region}
-                    </option>
-                  ))
-                }
-              </select>
-              <h3 className="font-medium mb-2 mt-6">Cinderella Picks (seeds 11-16, double pts)</h3>
-              <div className="space-y-2">
-                {preTournamentPicks.cinderellas.map((teamId, index) => (
-                  <div key={`cinderella-${index}`}>
-                    <select
-                      value={teamId}
-                      onChange={(e) => handleCinderellaChange(index, e.target.value)}
-                      className="w-full p-2 border rounded"
-                      required
-                    >
-                    <option value="">-- Select Cinderella {index + 1} --</option>
-                      {cinderellaTeams
-                        .sort((a, b) => a.seed - b.seed || a.name.localeCompare(b.name))
-                        .map(team => (
-                          <option key={team.id} value={team.id.toString()}>
-                            ({team.seed}) {team.name} - {team.region}
-                          </option>
-                        ))
-                      }
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-between">
-            <button
-              onClick={goToPreviousStep}
-              className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
-            >
-              Back
-            </button>
-            <button
-              onClick={goToNextStep}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            >
-              {tournament?.currentRound && tournament.currentRound !== 'Pre-Tournament'
-                ? 'Continue to Round Picks'
-                : 'Submit Picks'
-              }
-            </button>
-          </div>
+      ) : picksData.participants.length === 0 ? (
+        <div className="user_picks_no_picks">
+          <p>No participants found for this tournament.</p>
         </div>
-      )}
-      {step === 'round-picks' && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">
-            {tournament.currentRound} Picks
-          </h2>
-          {games.length > 0 ? (
-            <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {games.map(game => {
-                  const team1 = teams.find(t => t.id === game.team1Id) || { id: 0, name: 'TBD', seed: 0, region: '' };
-                  const team2 = teams.find(t => t.id === game.team2Id) || { id: 0, name: 'TBD', seed: 0, region: '' };
-                  return (
-                    <div key={game.id} className="border p-4 rounded">
-                      <div className="text-sm font-medium text-gray-500 mb-2">
-                        {game.region} Region
+      ) : (
+        <div className="user_picks_table_container">
+          <table className="user_picks_table">
+            <thead>
+              <tr>
+                <th className="user_picks_header user_picks_participant_column">Participant</th>
+                {picksData.matches.map(match => (
+                  <th key={match.id} className="user_picks_header user_picks_match_column">
+                    <div className="user_picks_matchup">
+                      <div className="user_picks_team">
+                        <span className="user_picks_seed">{match.team1.seed}</span>
+                        <span className="user_picks_name">{match.team1.name}</span>
                       </div>
-                      <div className="space-y-2">
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`game-${game.id}`}
-                            value={team1.id.toString()}
-                            checked={roundPicks[game.id] === team1.id.toString()}
-                            onChange={() => handleRoundPickChange(game.id, team1.id.toString())}
-                            className="mr-2"
-                            required
-                          />
-                          <span>
-                            ({team1.seed}) {team1.name}
-                          </span>
-                        </label>
-                        <label className="flex items-center">
-                          <input
-                            type="radio"
-                            name={`game-${game.id}`}
-                            value={team2.id.toString()}
-                            checked={roundPicks[game.id] === team2.id.toString()}
-                            onChange={() => handleRoundPickChange(game.id, team2.id.toString())}
-                            className="mr-2"
-                            required
-                          />
-                          <span>
-                            ({team2.seed}) {team2.name}
-                          </span>
-                        </label>
+                      <div className="user_picks_vs">vs</div>
+                      <div className="user_picks_team">
+                        <span className="user_picks_seed">{match.team2.seed}</span>
+                        <span className="user_picks_name">{match.team2.name}</span>
                       </div>
+                      {match.completed && match.winnerId && (
+                        <div className="user_picks_result">
+                          <span className="user_picks_winner">
+                            Winner: {
+                              match.winnerId === match.team1.id 
+                                ? match.team1.name 
+                                : match.team2.name
+                            }
+                          </span>
+                          {match.team1Score !== null && match.team2Score !== null && (
+                            <span className="user_picks_score">
+                              {match.team1Score}-{match.team2Score}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-              <div className="mt-6 flex justify-between">
-                <button
-                  onClick={goToPreviousStep}
-                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={submitPicks}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Submitting...' : 'Submit All Picks'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-yellow-50 p-4 rounded">
-              <p>No games found for the current round. Please check back later.</p>
-              <div className="mt-4">
-                <button
-                  onClick={goToPreviousStep}
-                  className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
-                >
-                  Back
-                </button>
-              </div>
-            </div>
-          )}
+                  </th>
+                ))}
+                <th className="user_picks_header user_picks_score_column">Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {picksData.participants.map(participant => (
+                <tr key={participant.participantId} className="user_picks_row">
+                  <td className="user_picks_cell user_picks_participant_cell">
+                    {participant.participantName}
+                  </td>
+                  {picksData.matches.map(match => {
+                    const pick = participant.picks.find(p => p.matchId === match.id);
+                    if (!pick) {
+                      return (
+                        <td key={match.id} className="user_picks_cell user_picks_no_pick">
+                          No pick
+                        </td>
+                      );
+                    }
+                    
+                    let pickClass = "user_picks_cell";
+                    
+                    // Add class based on correctness (if match is completed)
+                    if (match.completed && pick.correct !== null) {
+                      pickClass += pick.correct 
+                        ? " user_picks_correct" 
+                        : " user_picks_incorrect";
+                    }
+                    
+                    return (
+                      <td key={match.id} className={pickClass}>
+                        <div className="user_picks_pick">
+                          <span className="user_picks_pick_seed">{pick.teamSeed}</span>
+                          <span className="user_picks_pick_name">{pick.teamName}</span>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="user_picks_cell user_picks_score_cell">
+                    {participant.totalScore}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
   );
 };
 
-export default PickSubmissionForm;
+export default UserPicksDisplay;

@@ -128,12 +128,13 @@ export default function AdminDashboard() {
           />
         );
       case 'participants':
-        return (
-          <ParticipantManagement 
-            participants={participants}
-            onParticipantUpdate={handleParticipantUpdate}
-          />
-        );
+		  return (
+			<ParticipantManagement 
+			  participants={participants}
+			  onParticipantUpdate={handleParticipantUpdate}
+			  tournamentData={tournamentData} // Add this line
+			/>
+		  );
       case 'games':
         return (
           <GameResultsManagement 

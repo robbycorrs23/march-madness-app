@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import ParticipantList from '../ParticipantList';
 import { Participant as AdminParticipant } from '../../admin/page';
+import { TournamentData } from '../../admin/page';
 
 // Define the participant list component's type explicitly
 interface ParticipantListComponentType {
@@ -15,11 +16,13 @@ interface ParticipantListComponentType {
 interface ParticipantManagementProps {
   participants: AdminParticipant[];
   onParticipantUpdate: (participant: AdminParticipant, action?: string) => void;
+  tournamentData: TournamentData | null; // Add this line
 }
 
 const ParticipantManagement: React.FC<ParticipantManagementProps> = ({ 
   participants, 
-  onParticipantUpdate 
+  onParticipantUpdate,
+  tournamentData
 }) => {
   const [isSendingReminders, setIsSendingReminders] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -27,12 +30,12 @@ const ParticipantManagement: React.FC<ParticipantManagementProps> = ({
   // Simplest solution - use type assertion to bypass the type check
   // TypeScript will trust us that the implementation matches
   const participantListProps = {
-    participants: participants as unknown as ParticipantListComponentType[],
-    onUpdate: ((p: ParticipantListComponentType, action?: string) => {
-      // Convert back to admin participant type if needed
-      onParticipantUpdate(p as unknown as AdminParticipant, action);
-    }) as any
-  };
+	  participants: participants as unknown as ParticipantListComponentType[],
+	  onUpdate: ((p: ParticipantListComponentType, action?: string) => {
+		onParticipantUpdate(p as unknown as AdminParticipant, action);
+	  }) as any,
+	  tournamentId: tournamentData?.id ? parseInt(tournamentData.id) : undefined
+	};
 
   const sendPaymentReminders = async () => {
     setIsSendingReminders(true);

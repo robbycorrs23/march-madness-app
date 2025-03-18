@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import './game-management.css';
 
 // Define interfaces for TypeScript
 interface Team {
@@ -9,7 +10,7 @@ interface Team {
   region?: string;
 }
 
-interface Game {
+interface Match {
   id: number;
   round: string;
   region: string;
@@ -25,13 +26,142 @@ interface GameManagementProps {
   tournamentId: number | string;
 }
 
+// Separate component for individual match row
+const MatchRow = ({ 
+  match, 
+  teams, 
+  onUpdateMatchState
+}: { 
+  match: Match, 
+  teams: Team[], 
+  onUpdateMatchState: (matchId: number, updates: Partial<Match>) => void
+}) => {
+  // Local state for each match row
+  const [winnerId, setWinnerId] = useState<string | number>(match.winnerId || '');
+  const [team1Score, setTeam1Score] = useState<string | number>(match.team1Score || '');
+  const [team2Score, setTeam2Score] = useState<string | number>(match.team2Score || '');
+  const [hasChanged, setHasChanged] = useState(false);
+  
+  // Find teams
+  const team1 = teams.find((team) => team.id === match.team1Id) || { id: 0, name: 'TBD', seed: '-' };
+  const team2 = teams.find((team) => team.id === match.team2Id) || { id: 0, name: 'TBD', seed: '-' };
+
+  // Update local state when match props change
+  useEffect(() => {
+    setWinnerId(match.winnerId || '');
+    setTeam1Score(match.team1Score || '');
+    setTeam2Score(match.team2Score || '');
+    setHasChanged(false);
+  }, [match.winnerId, match.team1Score, match.team2Score]);
+  
+  // When values change, update parent component
+  useEffect(() => {
+    if (hasChanged) {
+      // Create updates object with only the fields that have values
+      const updates: Partial<Match> = {};
+      
+      if (winnerId) {
+        updates.winnerId = Number(winnerId);
+      }
+      
+      if (team1Score !== '') {
+        updates.team1Score = Number(team1Score);
+      }
+      
+      if (team2Score !== '') {
+        updates.team2Score = Number(team2Score);
+      }
+      
+      // Only send update if we have at least one field
+      if (Object.keys(updates).length > 0) {
+        onUpdateMatchState(match.id, updates);
+      }
+    }
+  }, [winnerId, team1Score, team2Score, hasChanged, match.id, onUpdateMatchState]);
+  
+  const handleWinnerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setWinnerId(e.target.value);
+    setHasChanged(true);
+  };
+
+  const handleTeam1ScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeam1Score(e.target.value);
+    setHasChanged(true);
+  };
+
+  const handleTeam2ScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeam2Score(e.target.value);
+    setHasChanged(true);
+  };
+
+  return (
+    <tr key={match.id}>
+      <td>{match.region}</td>
+      <td>
+        <div className="game-management-team-info">
+          <span className="game-management-team-seed">{team1.seed}</span>
+          <span>{team1.name}</span>
+        </div>
+      </td>
+      <td>
+        <div className="game-management-team-info">
+          <span className="game-management-team-seed">{team2.seed}</span>
+          <span>{team2.name}</span>
+        </div>
+      </td>
+      <td>
+        <select
+          className="game-management-winner-select"
+          value={winnerId.toString()}
+          onChange={handleWinnerChange}
+        >
+          <option value="">-- Select Winner --</option>
+          <option value={team1.id.toString()}>
+            ({team1.seed}) {team1.name}
+          </option>
+          <option value={team2.id.toString()}>
+            ({team2.seed}) {team2.name}
+          </option>
+        </select>
+      </td>
+      <td>
+        <div className="game-management-score-inputs">
+          <input
+            type="number"
+            className="game-management-score-input"
+            value={team1Score.toString()}
+            onChange={handleTeam1ScoreChange}
+            min="0"
+          />
+          <span>-</span>
+          <input
+            type="number"
+            className="game-management-score-input"
+            value={team2Score.toString()}
+            onChange={handleTeam2ScoreChange}
+            min="0"
+          />
+        </div>
+      </td>
+      <td>
+        {match.completed && (
+          <span className="game-management-match-complete">
+            Complete
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+};
+
 const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
   const [currentRound, setCurrentRound] = useState('Round of 64');
-  const [games, setGames] = useState<Game[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [pendingUpdates, setPendingUpdates] = useState<{[key: number]: Partial<Match>}>({});
 
   const rounds = [
     'Round of 64',
@@ -42,7 +172,7 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
     'Championship'
   ];
 
-  // Load games and teams
+  // Load matches and teams
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -55,13 +185,13 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
         const teamsData = await teamsResponse.json();
         setTeams(teamsData);
 
-        // Fetch games for the current round
-        const gamesResponse = await fetch(`/api/games?round=${currentRound}`);
-        if (!gamesResponse.ok) {
-          throw new Error('Failed to fetch games');
+        // Fetch matches for the current round
+        const matchesResponse = await fetch(`/api/matches?round=${currentRound}`);
+        if (!matchesResponse.ok) {
+          throw new Error('Failed to fetch matches');
         }
-        const gamesData = await gamesResponse.json();
-        setGames(gamesData);
+        const matchesData = await matchesResponse.json();
+        setMatches(matchesData);
       } catch (error) {
         setError((error as Error).message);
       } finally {
@@ -72,140 +202,52 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
     fetchData();
   }, [currentRound]);
 
-  // Update game result
-  const updateGame = async (
-    gameId: number, 
-    winnerId: number | string, 
-    team1Score: number | string, 
-    team2Score: number | string
-  ) => {
-    try {
-      const response = await fetch(`/api/games/${gameId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          winnerId: Number(winnerId),
-          team1Score: parseInt(team1Score as string),
-          team2Score: parseInt(team2Score as string),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update game');
-      }
-
-      // Update the local state
-      setGames(
-        games.map((game) =>
-          game.id === gameId
-            ? {
-                ...game,
-                winnerId: Number(winnerId),
-                team1Score: parseInt(team1Score as string),
-                team2Score: parseInt(team2Score as string),
-                completed: true,
-              }
-            : game
-        )
-      );
-
-      setSuccessMessage('Game updated successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
-    } catch (error) {
-      setError((error as Error).message);
-    }
+  // Update match state in parent component
+  const handleUpdateMatchState = (matchId: number, updates: Partial<Match>) => {
+    setPendingUpdates(prev => ({
+      ...prev,
+      [matchId]: updates
+    }));
   };
 
-  // Calculate scores for all participants
-  const calculateScores = async () => {
+  // Save all pending match updates
+  const saveAllResults = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/scores/calculate', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to calculate scores');
-      }
-
-      setSuccessMessage('Scores calculated successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
-    } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Advance to next round
-  const advanceToNextRound = async () => {
-    const currentIndex = rounds.indexOf(currentRound);
-    if (currentIndex < rounds.length - 1) {
-      const nextRound = rounds[currentIndex + 1];
-      try {
-        setLoading(true);
-        const response = await fetch('/api/tournament/advance-round', {
-          method: 'POST',
+      // Prepare updates
+      const updatePromises = Object.entries(pendingUpdates).map(([matchId, updates]) => {
+        // Allow updates with partial data - don't require all fields to be filled
+        return fetch(`/api/matches/${matchId}`, {
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            tournamentId,
-            currentRound,
-            nextRound,
-          }),
+          body: JSON.stringify(updates),
         });
-
-        if (!response.ok) {
-          throw new Error('Failed to advance to next round');
-        }
-
-        setCurrentRound(nextRound);
-        setSuccessMessage(`Advanced to ${nextRound} successfully!`);
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
-      } catch (error) {
-        setError((error as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Generate games for next round based on winners
-  const generateNextRoundGames = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/tournament/generate-next-round', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tournamentId,
-          currentRound,
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate next round games');
-      }
+      // Execute all updates
+      const responses = await Promise.all(updatePromises);
 
-      setSuccessMessage('Next round games generated successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-      }, 3000);
+      // Check if any updates were successful
+      const someSuccessful = responses.some(response => response?.ok);
+
+      if (someSuccessful) {
+        // Refresh matches
+        const matchesResponse = await fetch(`/api/matches?round=${currentRound}`);
+        if (matchesResponse.ok) {
+          const matchesData = await matchesResponse.json();
+          setMatches(matchesData);
+        }
+        
+        // Clear pending updates
+        setPendingUpdates({});
+
+        setSuccessMessage('Match results saved successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
+      } else {
+        throw new Error('Failed to save match results');
+      }
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -213,197 +255,108 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
     }
   };
 
-  // Find team by ID
-  const getTeam = (teamId: number): Team => {
-    return teams.find((team) => team.id === teamId) || { id: 0, name: 'TBD', seed: '-' };
+  // Navigate between rounds
+  const navigateRound = (direction: 'prev' | 'next') => {
+    const currentIndex = rounds.indexOf(currentRound);
+    if (direction === 'prev' && currentIndex > 0) {
+      setCurrentRound(rounds[currentIndex - 1]);
+    } else if (direction === 'next' && currentIndex < rounds.length - 1) {
+      setCurrentRound(rounds[currentIndex + 1]);
+    }
   };
 
-  if (loading && games.length === 0) {
-    return <div className="text-center py-10">Loading...</div>;
-  }
+  // Count how many matches have winners
+  const matchesWithWinners = matches.filter(match => match.winnerId !== null).length;
+  const totalMatches = matches.length;
+
+  // Check if we have any pending updates
+  const hasPendingUpdates = Object.keys(pendingUpdates).length > 0;
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Game Management</h2>
+    <div className="game-management-container">
+      <h2 className="game-management-title">Game Management</h2>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="game-management-error">
           {error}
         </div>
       )}
       
       {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className="game-management-success">
           {successMessage}
         </div>
       )}
       
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Current Round:</label>
-          <select
-            className="border rounded px-3 py-2"
-            value={currentRound}
-            onChange={(e) => setCurrentRound(e.target.value)}
+      <div className="game-management-controls">
+        <div className="game-management-round-navigation">
+          <button 
+            className="game-management-btn" 
+            onClick={() => navigateRound('prev')}
+            disabled={rounds.indexOf(currentRound) === 0}
           >
-            {rounds.map((round) => (
-              <option key={round} value={round}>
-                {round}
-              </option>
-            ))}
-          </select>
+            Previous Round
+          </button>
+          <span className="game-management-current-round">{currentRound}</span>
+          <button 
+            className="game-management-btn" 
+            onClick={() => navigateRound('next')}
+            disabled={rounds.indexOf(currentRound) === rounds.length - 1}
+          >
+            Next Round
+          </button>
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={calculateScores}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-            disabled={loading}
-          >
-            Calculate Scores
-          </button>
-          
-          <button
-            onClick={advanceToNextRound}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-            disabled={loading || rounds.indexOf(currentRound) === rounds.length - 1}
-          >
-            Advance to Next Round
-          </button>
-          
-          <button
-            onClick={generateNextRoundGames}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            disabled={loading || currentRound === 'Championship'}
-          >
-            Generate Next Round Games
-          </button>
+        <div className="game-management-progress">
+          <span>{matchesWithWinners} of {totalMatches} matches have winners</span>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h3 className="text-lg font-medium">{currentRound} Games</h3>
+      <div className="game-management-matches-container">
+        <div className="game-management-matches-header">
+          <h3 className="game-management-round-title">{currentRound} Matches</h3>
         </div>
 
-        {games.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No games found for this round.
+        {matches.length === 0 ? (
+          <div className="game-management-no-matches">
+            No matches found for this round.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Region
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team 1
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team 2
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Winner
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Score
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {games.map((game) => {
-                  const team1 = getTeam(game.team1Id);
-                  const team2 = getTeam(game.team2Id);
-
-                  // State for this game row
-                  const [winnerId, setWinnerId] = useState<string | number>(game.winnerId || '');
-                  const [team1Score, setTeam1Score] = useState<string | number>(game.team1Score || '');
-                  const [team2Score, setTeam2Score] = useState<string | number>(game.team2Score || '');
-
-                  return (
-                    <tr key={game.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {game.region}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="bg-gray-200 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-xs font-bold">
-                            {team1.seed}
-                          </span>
-                          <span>{team1.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="bg-gray-200 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-xs font-bold">
-                            {team2.seed}
-                          </span>
-                          <span>{team2.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <select
-                          className="border rounded px-2 py-1 w-full"
-                          value={winnerId.toString()}
-                          onChange={(e) => setWinnerId(e.target.value)}
-                          disabled={game.completed}
-                        >
-                          <option value="">-- Select Winner --</option>
-                          <option value={team1.id.toString()}>
-                            ({team1.seed}) {team1.name}
-                          </option>
-                          <option value={team2.id.toString()}>
-                            ({team2.seed}) {team2.name}
-                          </option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="number"
-                            className="border rounded px-2 py-1 w-16"
-                            value={team1Score.toString()}
-                            onChange={(e) => setTeam1Score(e.target.value)}
-                            min="0"
-                            disabled={game.completed}
-                          />
-                          <span>-</span>
-                          <input
-                            type="number"
-                            className="border rounded px-2 py-1 w-16"
-                            value={team2Score.toString()}
-                            onChange={(e) => setTeam2Score(e.target.value)}
-                            min="0"
-                            disabled={game.completed}
-                          />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {!game.completed ? (
-                          <button
-                            onClick={() => updateGame(game.id, winnerId, team1Score, team2Score)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded"
-                            disabled={!winnerId || team1Score === '' || team2Score === ''}
-                          >
-                            Save Result
-                          </button>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Complete
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="game-management-matches-table-container">
+              <table className="game-management-matches-table">
+                <thead>
+                  <tr>
+                    <th>Region</th>
+                    <th>Team 1</th>
+                    <th>Team 2</th>
+                    <th>Winner</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matches.map((match) => (
+                    <MatchRow 
+                      key={match.id} 
+                      match={match} 
+                      teams={teams} 
+                      onUpdateMatchState={handleUpdateMatchState}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="game-management-save-all-container">
+              <button
+                onClick={saveAllResults}
+                className="game-management-btn game-management-btn-save-all"
+                disabled={loading || !hasPendingUpdates}
+              >
+                Save Results
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

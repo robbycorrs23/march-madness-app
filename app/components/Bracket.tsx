@@ -1,6 +1,6 @@
 // components/Bracket.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Define TypeScript interfaces
 interface Team {
@@ -39,6 +39,9 @@ interface OrganizedGames {
 
 const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
   const [selectedRegion, setSelectedRegion] = useState('All');
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const bracketRef = useRef<HTMLDivElement>(null);
+  
   const regions = ['East', 'West', 'South', 'Midwest'];
   const rounds = [
     'Round of 64',
@@ -48,6 +51,64 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
     'Final Four',
     'Championship'
   ];
+  
+  // Initialize responsive features
+  useEffect(() => {
+    // Add scroll indicator
+    const bracketContainer = bracketRef.current;
+    if (!bracketContainer) return;
+    
+    // Only add elements if they don't already exist
+    if (!document.querySelector('.bracket-scroll-indicator')) {
+      // Add scroll indicator
+      const scrollIndicator = document.createElement('div');
+      scrollIndicator.className = 'bracket-scroll-indicator';
+      scrollIndicator.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg> Swipe to view full bracket <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+      
+      // Insert the elements
+      bracketContainer.parentNode?.insertBefore(scrollIndicator, bracketContainer);
+      
+      // Fade out scroll indicator after user scrolls
+      let scrollTimer: NodeJS.Timeout;
+      bracketContainer.addEventListener('scroll', () => {
+        scrollIndicator.style.opacity = '0.3';
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(() => {
+          scrollIndicator.style.opacity = '1';
+        }, 1000);
+      });
+    }
+    
+    // Handle double-tap to zoom
+    let lastTap = 0;
+    const handleDoubleTap = (e: TouchEvent) => {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+      
+      if (tapLength < 300 && tapLength > 0) {
+        // Double tap detected
+        setZoomLevel(prev => prev === 100 ? 130 : 100);
+        e.preventDefault();
+      }
+      
+      lastTap = currentTime;
+    };
+    
+    bracketContainer?.addEventListener('touchend', handleDoubleTap as EventListener);
+    
+    return () => {
+      bracketContainer?.removeEventListener('touchend', handleDoubleTap as EventListener);
+    };
+  }, []);
+  
+  // Apply zoom effect
+  useEffect(() => {
+    const bracketRounds = document.querySelector('.bracket-rounds');
+    if (bracketRounds && bracketRounds instanceof HTMLElement) {
+      bracketRounds.style.transform = `scale(${zoomLevel / 100})`;
+      bracketRounds.style.transformOrigin = 'top left';
+    }
+  }, [zoomLevel]);
   
   // Find team by ID
   const getTeam = (teamId: number): Team => {
@@ -124,7 +185,7 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
   const organized = organizedGames();
   
   return (
-    <div>
+    <div className="bracket-wrapper">
       <div className="bracket-filters">
         <button
           className={`btn ${selectedRegion === 'All' ? 'btn-primary' : 'btn-outline-primary'}`}
@@ -142,7 +203,25 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
           </button>
         ))}
       </div>
-      <div className="bracket-container">
+      
+      {/* Zoom controls for mobile */}
+      <div className="bracket-zoom-controls">
+        <button 
+          className="bracket-zoom-btn zoom-out" 
+          onClick={() => setZoomLevel(prev => Math.max(70, prev - 10))}
+        >
+          -
+        </button>
+        <span className="bracket-zoom-level">{zoomLevel}%</span>
+        <button 
+          className="bracket-zoom-btn zoom-in" 
+          onClick={() => setZoomLevel(prev => Math.min(150, prev + 10))}
+        >
+          +
+        </button>
+      </div>
+      
+      <div className="bracket-container" ref={bracketRef}>
         <div className="bracket-rounds">
           {rounds.map((round) => (
             <div key={round} className="bracket-round">

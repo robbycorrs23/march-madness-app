@@ -1,0 +1,266 @@
+/* game-management.css */
+.game-management-container {
+  padding: 1.5rem;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.game-management-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  color: #2d3748;
+}
+
+.game-management-error {
+  background-color: #fecaca;
+  border: 1px solid #fca5a5;
+  color: #7f1d1d;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.game-management-success {
+  background-color: #d1fae5;
+  border: 1px solid #6ee7b7;
+  color: #064e3b;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.game-management-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.game-management-round-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.game-management-round-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.game-management-round-select {
+  border: 1px solid #cbd5e0;
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.game-management-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.game-management-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #2196f3;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.game-management-btn-calculate {
+  background-color: #9f7aea;
+}
+
+.game-management-btn:hover:not(:disabled) {
+  background-color: #1976d2;
+}
+
+.game-management-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.game-management-btn-save {
+  background-color: #4caf50;
+  min-width: 80px;
+}
+
+.game-management-btn-save:hover:not(:disabled) {
+  background-color: #388e3c;
+}
+
+.game-management-btn-save {
+  background-color: #4299e1;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
+}
+
+.game-management-btn-save:hover {
+  background-color: #3182ce;
+}
+
+.game-management-loading {
+  text-align: center;
+  padding: 2.5rem;
+  color: #718096;
+}
+
+.game-management-matches-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.game-management-matches-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.game-management-round-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.game-management-no-matches {
+  padding: 1.5rem;
+  text-align: center;
+  color: #718096;
+}
+
+.game-management-matches-table-container {
+  overflow-x: auto;
+}
+
+.game-management-matches-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.game-management-matches-table thead {
+  background-color: #f7fafc;
+}
+
+.game-management-matches-table th {
+  padding: 0.75rem 1.5rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #4a5568;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.game-management-matches-table tbody tr {
+  background-color: white;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.game-management-matches-table td {
+  padding: 1rem 1.5rem;
+  white-space: nowrap;
+}
+
+.game-management-team-info {
+  display: flex;
+  align-items: center;
+}
+
+.game-management-team-seed {
+  background-color: #edf2f7;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  margin-right: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.game-management-actions-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.game-management-btn-finalize {
+  background-color: #ff9800;
+  font-weight: 600;
+}
+
+.game-management-btn-finalize:hover:not(:disabled) {
+  background-color: #f57c00;
+}
+
+.game-management-current-round {
+  margin: 0 14px;
+}
+
+.game-management-winner-select {
+  border: 1px solid #cbd5e0;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  width: 100%;
+}
+
+.game-management-score-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.game-management-score-input {
+  border: 1px solid #cbd5e0;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  width: 4rem;
+}
+
+.game-management-match-complete {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #9ae6b4;
+  color: #22543d;
+}
+
+.game-management-save-all-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #f7fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.game-management-btn-save-all {
+  background-color: #4299e1;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.game-management-btn-save-all:hover {
+  background-color: #3182ce;
+}
+
+.game-management-btn-save-all:disabled {
+  background-color: #cbd5e0;
+  cursor: not-allowed;
+}

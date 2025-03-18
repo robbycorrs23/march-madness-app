@@ -142,10 +142,26 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
   };
 
   // Remove a team
-  const removeTeam = (teamId: string | number) => {
-    setTeams(teams.filter(team => team.id !== teamId));
-    setSuccess('Team removed');
-  };
+  const removeTeam = async (teamId: string | number) => {
+	  // Only make API call for permanent IDs (not temporary ones)
+	  if (!teamId.toString().startsWith('temp-')) {
+		try {
+		  const response = await fetch(`/api/teams?id=${teamId}`, {
+			method: 'DELETE'
+		  });
+		  if (!response.ok) {
+			throw new Error('Failed to delete team');
+		  }
+		} catch (error) {
+		  setError(error instanceof Error ? error.message : String(error));
+		  return; // Don't update state if API call fails
+		}
+	  }
+	  
+	  // Update UI state
+	  setTeams(teams.filter(team => team.id !== teamId));
+	  setSuccess('Team removed');
+	};
 
   // Import teams from CSV
   const importTeamsFromCSV = () => {
@@ -224,50 +240,64 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
     URL.revokeObjectURL(url);
   };
 
-  // Group teams by region
-  const teamsByRegion: TeamsByRegion = teams.reduce((acc: TeamsByRegion, team) => {
-    if (!acc[team.region]) {
-      acc[team.region] = [];
-    }
-    acc[team.region].push(team);
-    return acc;
-  }, {});
+  // Group teams by region with deduplication
+	const teamsByRegion: TeamsByRegion = teams.reduce((acc: TeamsByRegion, team) => {
+	  if (!acc[team.region]) {
+		acc[team.region] = [];
+	  }
+	  
+	  // Check if a team with the same name and seed already exists in this region
+	  const isDuplicate = acc[team.region].some(
+		existingTeam => existingTeam.name === team.name && existingTeam.seed === team.seed
+	  );
+	  
+	  // Only add if not a duplicate
+	  if (!isDuplicate) {
+		acc[team.region].push(team);
+	  }
+	  
+	  return acc;
+	}, {});
 
   if (loading && teams.length === 0) {
-    return <div className="text-center py-10">Loading...</div>;
+    return <div className="loading-indicator">Loading...</div>;
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Team Management</h2>
+    <div className="team-management">
+      <h2 className="section-title">Team Management</h2>
+      
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="alert alert-error">
           {error}
         </div>
       )}
+      
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className="alert alert-success">
           {success}
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      
+      <div className="form-grid">
         {/* Manual Team Entry */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold mb-3">Add Team Manually</h3>
-          <form onSubmit={addTeam} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
+        <div className="card">
+          <h3 className="card-title">Add Team Manually</h3>
+          <form onSubmit={addTeam} className="form">
+            <div className="form-group">
+              <label className="form-label">Team Name</label>
               <input
                 type="text"
                 name="name"
                 value={newTeam.name}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="form-input"
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Seed (1-16)</label>
+            
+            <div className="form-group">
+              <label className="form-label">Seed (1-16)</label>
               <input
                 type="number"
                 name="seed"
@@ -275,17 +305,18 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
                 onChange={handleInputChange}
                 min="1"
                 max="16"
-                className="w-full p-2 border rounded"
+                className="form-input"
                 required
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+            
+            <div className="form-group">
+              <label className="form-label">Region</label>
               <select
                 name="region"
                 value={newTeam.region}
                 onChange={handleInputChange}
-                className="w-full p-2 border rounded"
+                className="form-select"
                 required
               >
                 <option value="">-- Select Region --</option>
@@ -295,26 +326,28 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
                 <option value="Midwest">Midwest</option>
               </select>
             </div>
-            <div>
+            
+            <div className="form-actions">
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                className="btn btn-primary"
               >
                 Add Team
               </button>
             </div>
           </form>
         </div>
+        
         {/* CSV Import */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold mb-3">Import Teams from CSV</h3>
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2">
+        <div className="card">
+          <h3 className="card-title">Import Teams from CSV</h3>
+          <div className="csv-import-section">
+            <p className="help-text">
               Upload a CSV file with columns for name, seed, and region.
             </p>
             <button
               onClick={generateCSVTemplate}
-              className="text-blue-600 hover:text-blue-800 text-sm underline mb-2"
+              className="csv-template-link"
             >
               Download CSV Template
             </button>
@@ -322,17 +355,18 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
               type="file"
               accept=".csv"
               onChange={handleFileUpload}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="file-input"
             />
           </div>
+          
           {csvData && csvData.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-green-600 mb-2">
+            <div className="csv-import-actions">
+              <p className="csv-success-message">
                 {csvData.length} teams parsed from CSV
               </p>
               <button
                 onClick={importTeamsFromCSV}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                className="btn btn-success"
               >
                 Import Teams
               </button>
@@ -340,45 +374,47 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
           )}
         </div>
       </div>
+      
       {/* Team List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-medium">Teams ({teams.length})</h3>
+      <div className="teams-container">
+        <div className="teams-header">
+          <h3 className="teams-title">Teams ({teams.length})</h3>
           {teams.length > 0 && (
             <button
               onClick={saveTeams}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm"
+              className="btn btn-save"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Save All Teams'}
             </button>
           )}
         </div>
+        
         {teams.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
+          <div className="no-teams-message">
             No teams added yet.
           </div>
         ) : (
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="teams-grid">
             {Object.entries(teamsByRegion).map(([region, regionTeams]) => (
-              <div key={region} className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-100 px-4 py-2 font-semibold">
+              <div key={region} className="region-card">
+                <div className="region-header">
                   {region} Region
                 </div>
-                <ul className="divide-y divide-gray-200">
+                <ul className="team-list">
                   {regionTeams
                     .sort((a, b) => Number(a.seed) - Number(b.seed))
                     .map(team => (
-                      <li key={team.id} className="px-4 py-2 flex justify-between items-center">
-                        <span>
-                          <span className="inline-block bg-gray-200 rounded-full w-6 h-6 text-center text-xs font-bold mr-2">
+                      <li key={team.id} className="team-item">
+                        <span className="team-name">
+                          <span className="seed-badge">
                             {team.seed}
                           </span>
                           {team.name}
                         </span>
                         <button
                           onClick={() => removeTeam(team.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="remove-btn"
                         >
                           Remove
                         </button>

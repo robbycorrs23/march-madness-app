@@ -22,6 +22,7 @@ model Tournament {
   teams       Team[]
   games       Game[]
   participants Participant[]
+  scheduledTransitions ScheduledTransition[]
 }
 
 model Team {
@@ -44,6 +45,7 @@ model Team {
   championPicks   ChampionPick[]
   cinderellaPicks CinderellaPick[]
   gamePicks       GamePick[]
+  matchPicks      MatchPick[]
   
   // NEW Match relations (properly defined)
   asTeam1Matches Match[] @relation("MatchTeam1")
@@ -64,9 +66,9 @@ model Game {
   tournamentId Int
   
   tournament  Tournament @relation(fields: [tournamentId], references: [id])
-  team1       Team       @relation("Team1", fields: [team1Id], references: [id])
-  team2       Team       @relation("Team2", fields: [team2Id], references: [id])
-  winner      Team?      @relation("Winner", fields: [winnerId], references: [id])
+  team1       Team       @relation("Team1", fields: [team1Id], references: [id], onDelete: Cascade)
+  team2       Team       @relation("Team2", fields: [team2Id], references: [id], onDelete: Cascade)
+  winner      Team?      @relation("Winner", fields: [winnerId], references: [id], onDelete: SetNull)
   
   gamePicks   GamePick[]
 }
@@ -83,6 +85,7 @@ model Participant {
   
   preTournamentPick PreTournamentPick?
   gamePicks   GamePick[]
+  matchPicks   MatchPick[]
 }
 
 model PreTournamentPick {
@@ -133,8 +136,8 @@ model CinderellaPick {
   preTournamentPickId Int
   teamId             Int
   
-  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id])
-  team               Team              @relation(fields: [teamId], references: [id])
+  preTournamentPick  PreTournamentPick @relation(fields: [preTournamentPickId], references: [id], onDelete: Cascade)
+  team               Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
   
   @@unique([preTournamentPickId, teamId])
 }
@@ -147,27 +150,61 @@ model GamePick {
   correct       Boolean? // Will be set when game is completed
   roundScore    Int      @default(0)
   
-  participant   Participant @relation(fields: [participantId], references: [id])
-  game          Game        @relation(fields: [gameId], references: [id])
-  team          Team        @relation(fields: [teamId], references: [id])
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  game          Game        @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
   
   @@unique([participantId, gameId])
 }
 
 model Match {
-  id        Int      @id @default(autoincrement())
-  round     Int
-  region    String
-  team1Id   Int
-  team2Id   Int
-  winnerId  Int?
+  id          Int      @id @default(autoincrement())
+  round       Int
+  region      String
+  team1Id     Int
+  team2Id     Int
+  winnerId    Int?
   
-  // Relations to Team model (with FIXED relation names)
-  team1     Team     @relation("MatchTeam1", fields: [team1Id], references: [id])
-  team2     Team     @relation("MatchTeam2", fields: [team2Id], references: [id])
-  winner    Team?    @relation("MatchWinner", fields: [winnerId], references: [id])
+  // Add these new fields:
+  team1Score  Int?
+  team2Score  Int?
+  completed   Boolean  @default(false)
   
-  @@map("matches") // Optional: if you want the table name to be "matches" in DB
+  // Relations to Team model with cascade delete
+  team1       Team     @relation("MatchTeam1", fields: [team1Id], references: [id], onDelete: Cascade)
+  team2       Team     @relation("MatchTeam2", fields: [team2Id], references: [id], onDelete: Cascade)
+  winner      Team?    @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  
+  matchPicks  MatchPick[]
+  
+  @@map("matches")
+}
+
+model ScheduledTransition {
+  id            Int      @id @default(autoincrement())
+  tournamentId  Int
+  fromRound     String
+  toRound       String
+  scheduledTime DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}
+
+model MatchPick {
+  id            Int      @id @default(autoincrement())
+  participantId Int
+  matchId       Int
+  teamId        Int
+  correct       Boolean?
+  roundScore    Int      @default(0)
+  
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  match         Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team          Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@unique([participantId, matchId])
 }
 
 model User {

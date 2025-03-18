@@ -84,67 +84,67 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ existingTournament, o
 
   // Render tournament details step
   const renderDetailsStep = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Tournament Details</h3>
-      <form onSubmit={saveTournamentDetails} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tournament Name</label>
+    <div className="setup-step">
+      <h3 className="step-title">Tournament Details</h3>
+      <form onSubmit={saveTournamentDetails} className="setup-form">
+        <div className="form-group">
+          <label className="form-label">Tournament Name</label>
           <input
             type="text"
             name="name"
             value={tournamentData.name}
             onChange={handleChange}
-            className="w-full p-2 border rounded"
+            className="form-input"
             required
           />
        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Year</label>
             <input
               type="number"
               name="year"
               value={tournamentData.year}
               onChange={handleChange}
-              className="w-full p-2 border rounded"
+              className="form-input"
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Entry Fee ($)</label>
+          <div className="form-group">
+            <label className="form-label">Entry Fee ($)</label>
             <input
               type="number"
               name="entryFee"
               value={tournamentData.entryFee}
               onChange={handleChange}
-              className="w-full p-2 border rounded"
+              className="form-input"
               min="0"
               step="0.01"
               required
             />
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Regions (comma-separated)</label>
+        <div className="form-group">
+          <label className="form-label">Regions (comma-separated)</label>
           <input
             type="text"
             name="regions"
             value={tournamentData.regions.join(', ')}
             onChange={handleChange}
-            className="w-full p-2 border rounded"
+            className="form-input"
             required
           />
-          <div className="mt-1 text-sm text-gray-500">
+          <div className="form-help-text">
             Standard regions are East, West, South, and Midwest
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Starting Round</label>
+        <div className="form-group">
+          <label className="form-label">Starting Round</label>
           <select
             name="currentRound"
             value={tournamentData.currentRound}
             onChange={handleChange}
-            className="w-full p-2 border rounded"
+            className="form-select"
             required
           >
             <option value="Pre-Tournament">Pre-Tournament</option>
@@ -156,10 +156,10 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ existingTournament, o
             <option value="Championship">Championship</option>
           </select>
         </div>
-        <div className="pt-4">
+        <div className="form-actions">
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            className="btn btn-primary"
             disabled={loading}
           >
             {loading ? 'Saving...' : existingTournament ? 'Update Tournament' : 'Create Tournament'}
@@ -171,46 +171,32 @@ const TournamentSetup: React.FC<TournamentSetupProps> = ({ existingTournament, o
 
   // Render teams step (placeholder - will be replaced by TeamImport component)
   const renderTeamsStep = () => (
-    <div>
-      <h3 className="text-lg font-semibold mb-4">Import Teams</h3>
-      <p className="mb-4">
+    <div className="setup-step">
+      <h3 className="step-title">Import Teams</h3>
+      <p className="step-description">
         Now that you've set up your tournament, you can import the teams. You'll be able to:
       </p>
-      <ul className="list-disc pl-5 mb-4 space-y-1 text-gray-700">
+      <ul className="feature-list">
         <li>Upload teams via CSV</li>
         <li>Add teams manually</li>
         <li>Generate the tournament bracket</li>
       </ul>
-      <div className="mt-4">
-        <button
-          onClick={() => setStep('details')}
-          className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2"
-        >
-          Back to Details
-        </button>
-        {/* This would typically render the TeamImport component */}
-        <button
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Continue to Team Import
-        </button>
-      </div>
     </div>
   );
 
   return (
-    <div>
+    <div className="tournament-setup">
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="alert alert-error">
           {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className="alert alert-success">
           {success}
         </div>
       )}
-      <div className="bg-white rounded-lg p-6">
+      <div className="setup-card">
         {step === 'details' && renderDetailsStep()}
         {step === 'teams' && renderTeamsStep()}
       </div>
