@@ -2,6 +2,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../../lib/prisma';
 
+// Map round names to numeric values
+const roundMap = {
+  'Round of 64': 1,
+  'Round of 32': 2,
+  'Sweet 16': 3,
+  'Elite 8': 4,
+  'Final Four': 5,
+  'Championship': 6
+};
+
 /**
  * GET /api/public/picks
  * 
@@ -12,14 +22,17 @@ export async function GET(request: NextRequest) {
   try {
     // Get round from query params
     const searchParams = request.nextUrl.searchParams;
-    const round = searchParams.get('round');
+    const roundName = searchParams.get('round');
     
-    if (!round) {
+    if (!roundName || !roundMap[roundName as keyof typeof roundMap]) {
       return NextResponse.json(
-        { error: 'Round parameter is required' },
+        { error: 'Valid round parameter is required' },
         { status: 400 }
       );
     }
+    
+    // Convert round name to numeric value for the database query
+    const roundNumber = roundMap[roundName as keyof typeof roundMap];
     
     // Get current tournament to check if it's in progress
     const tournament = await prisma.tournament.findFirst({
@@ -52,9 +65,9 @@ export async function GET(request: NextRequest) {
     // The showPicks flag is now determined by whether the tournament has started, not by completed matches
     const showPicks = tournament.currentRound !== 'Pre-Tournament';
     
-    // Get all matches for the requested round
+    // Get all matches for the requested round, using the numeric round value
     const matches = await prisma.match.findMany({
-      where: { round: round },
+      where: { round: roundNumber },
       include: {
         team1: true,
         team2: true
@@ -101,7 +114,7 @@ export async function GET(request: NextRequest) {
     const allMatchPicks = await prisma.matchPick.findMany({
       where: {
         match: {
-          round: round
+          round: roundNumber
         }
       },
       include: {
@@ -164,7 +177,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching public picks:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch picks' },
+      { error: 'Failed to fetch picks', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

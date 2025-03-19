@@ -120,9 +120,6 @@ const Leaderboard = () => {
             <div className="text-sm text-neutral-medium">
               Total Participants: <span className="font-bold">{participants.length}</span>
             </div>
-            <button className="btn btn-sm btn-secondary">
-              <i className="btn-icon">📊</i> View Full Stats
-            </button>
           </div>
         </div>
       )}

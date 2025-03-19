@@ -77,31 +77,41 @@ const GameResultsManagement: React.FC<GameResultsManagementProps> = ({
   };
 
   // Calculate scores for the current round
-  const calculateAllScores = async () => {
-    setIsCalculating(true);
-    try {
-      const response = await fetch('/api/scores/calculate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tournamentId: tournamentData?.id
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to calculate scores');
-      }
-      
-      alert('Scores calculated successfully!');
-    } catch (error) {
-      console.error('Error calculating scores:', error);
-      alert(`Error calculating scores: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsCalculating(false);
-    }
-  };
+	const calculateAllScores = async () => {
+	  setIsCalculating(true);
+	  try {
+		const response = await fetch('/api/scores/calculate', {
+		  method: 'POST',
+		  headers: {
+			'Content-Type': 'application/json',
+		  },
+		  body: JSON.stringify({
+			tournamentId: tournamentData?.id
+		  }),
+		});
+		
+		if (!response.ok) {
+		  throw new Error('Failed to calculate scores');
+		}
+		
+		const result = await response.json();
+		
+		// Show success message
+		alert('Scores calculated successfully!');
+		
+		// Refresh the page to show updated scores
+		// Option 1: Full page refresh
+		window.location.reload();
+		
+		// Option 2: If you have a state update function to refresh just scores
+		// refreshScores();
+	  } catch (error) {
+		console.error('Error calculating scores:', error);
+		alert(`Error calculating scores: ${error instanceof Error ? error.message : 'Unknown error'}`);
+	  } finally {
+		setIsCalculating(false);
+	  }
+	};
 
   // Schedule round transition
   const scheduleRoundTransition = async () => {

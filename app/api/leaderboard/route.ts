@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 
+// Map numeric round values to points
+const roundPointsMap = {
+  1: 1,  // Round of 64
+  2: 2,  // Round of 32
+  3: 4,  // Sweet 16
+  4: 8,  // Elite 8
+  5: 15, // Final Four
+  6: 25  // Championship
+};
+
 // GET /api/leaderboard - Get leaderboard
 export async function GET(req: NextRequest) {
   try {
@@ -64,71 +74,58 @@ export async function GET(req: NextRequest) {
     
     // Transform the data for the leaderboard
     const leaderboardData = participants.map(participant => {
-      // Calculate pre-tournament score
+      // Get the stored pre-tournament score
       let preTournamentScore = participant.preTournamentPick?.score || 0;
       
       // Calculate Cinderella score
       let cinderellaScore = 0;
       
-      // If the tournament has started, calculate Cinderella scores
+      // Calculate cinderella scores (this is for display only, already included in totalScore)
       if (tournament.currentRound !== 'Pre-Tournament' && participant.preTournamentPick) {
-        // Get Cinderella picks (teams with seeds 11-16)
         const cinderellaPicks = participant.preTournamentPick.cinderellaPicks || [];
         
-        // For each Cinderella pick, calculate double points for each win
         cinderellaPicks.forEach(pick => {
-          // Find matches where this team won
-          const teamWins = participant.matchPicks.filter(
-            matchPick => matchPick.teamId === pick.teamId && matchPick.correct === true
-          );
-          
-          // Calculate points based on the round
-          let cinderellaPoints = 0;
-          teamWins.forEach(win => {
-            const matchRound = win.match.round;
-            // Apply the standard round points
-            switch(matchRound) {
-              case 'Round of 64': cinderellaPoints += 2; break; // 1 * 2 (double)
-              case 'Round of 32': cinderellaPoints += 4; break; // 2 * 2 (double)
-              case 'Sweet 16': cinderellaPoints += 8; break; // 4 * 2 (double)
-              case 'Elite 8': cinderellaPoints += 16; break; // 8 * 2 (double)
-              case 'Final Four': cinderellaPoints += 30; break; // 15 * 2 (double)
-              case 'Championship': cinderellaPoints += 50; break; // 25 * 2 (double)
-            }
-          });
-          
-          cinderellaScore += cinderellaPoints;
+          // Only count teams with seeds 11-16 as Cinderellas
+          if (pick.team.seed >= 11 && pick.team.seed <= 16) {
+            // Find matches where this team won
+            const teamWins = participant.matchPicks.filter(
+              matchPick => 
+                matchPick.match.winnerId === pick.teamId && 
+                matchPick.match.completed === true
+            );
+            
+            teamWins.forEach(win => {
+              const matchRound = win.match.round;
+              const roundPoints = roundPointsMap[matchRound as keyof typeof roundPointsMap] || 0;
+              cinderellaScore += roundPoints * 2; // Double points for Cinderella picks
+            });
+          }
         });
       }
       
-      // Calculate round score (from both gamePicks and matchPicks)
-      const gamePicks = participant.gamePicks || [];
-      const matchPicks = participant.matchPicks || [];
+      // Calculate round score (from matchPicks only)
+      const matchScore = participant.matchPicks.reduce(
+        (total, pick) => total + (pick.roundScore || 0), 
+        0
+      );
       
-      // Sum up round scores from all picks
-      const roundScore = 
-        gamePicks.reduce((total, pick) => total + (pick.roundScore || 0), 0) +
-        matchPicks.reduce((total, pick) => total + (pick.roundScore || 0), 0);
-      
-      // Return formatted data for the leaderboard
+      // Return formatted data for the leaderboard, using the saved totalScore
       return {
         id: participant.id,
         name: participant.name,
         preTournamentScore,
         cinderellaScore,
-        roundScore,
-        totalScore: preTournamentScore + cinderellaScore + roundScore,
+        roundScore: matchScore,
+        totalScore: participant.totalScore, // Use the stored total score
       };
     });
     
-    // Sort by total score descending
-    leaderboardData.sort((a, b) => b.totalScore - a.totalScore);
-    
+    // Sort by total score descending (should already be sorted from the query)
     return NextResponse.json(leaderboardData);
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch leaderboard' },
+      { error: 'Failed to fetch leaderboard', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

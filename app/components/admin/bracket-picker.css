@@ -346,3 +346,45 @@
     font-size: 0.875rem;
   }
 }
+
+/* Add these styles to your bracket-picker.css file */
+
+.bracket-tournament-status {
+  background-color: #f8f9fa;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+  border-left: 4px solid #3498db;
+}
+
+.bracket-warning-message {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+  border-left: 4px solid #ffc107;
+}
+
+.bracket-team-locked {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.bracket-lock-indicator {
+  position: absolute;
+  top: 60%;
+  right: 38%;
+  transform: translateY(-50%);
+  font-size: .8rem;
+  color: #fff;
+  background-color: #1E293B;
+  border-radius: 5px;
+  padding: 8px;
+}
+
+.bracket-matchup {
+  position: relative;
+}

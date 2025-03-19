@@ -6,7 +6,7 @@ import { prisma } from '../../../../../lib/prisma';
 // GET /api/tournament/[id]/scheduled-transition - Get scheduled transition if any
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -18,7 +18,9 @@ export async function GET(
       );
     }
     
-    const tournamentId = parseInt(params.id);
+    // Resolve the params promise before accessing id
+    const resolvedParams = await params;
+    const tournamentId = parseInt(resolvedParams.id);
     
     // Find scheduled transition for this tournament
     const scheduledTransition = await prisma.scheduledTransition.findFirst({

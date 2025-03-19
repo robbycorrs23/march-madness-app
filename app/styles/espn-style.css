@@ -110,7 +110,7 @@ img {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 2em;
 }
 
 .row {
@@ -3254,6 +3254,11 @@ img {
   min-width: 650px;
 }
 
+.user_picks_table thead tr th {
+  background-color: #003264 !important;
+  color: #fff;
+}
+
 .user_picks_header {
   position: sticky;
   top: 0;
@@ -3274,7 +3279,7 @@ img {
 }
 
 .user_picks_match_column {
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .user_picks_score_column {
@@ -3291,7 +3296,6 @@ img {
 .user_picks_team {
   display: flex;
   align-items: center;
-  margin-bottom: 4px;
 }
 
 .user_picks_seed {
@@ -3305,6 +3309,7 @@ img {
   font-size: 12px;
   margin-right: 6px;
   font-weight: bold;
+  color: #000;
 }
 
 .user_picks_name {
@@ -3313,8 +3318,8 @@ img {
 
 .user_picks_vs {
   font-size: 12px;
-  color: #757575;
-  margin: 2px 0;
+  color: #fff;
+  margin: 5px 0;
 }
 
 .user_picks_result {
@@ -3380,11 +3385,11 @@ img {
 }
 
 .user_picks_correct {
-  background-color: #e8f5e9;
+  background-color: #80f088;
 }
 
 .user_picks_incorrect {
-  background-color: #ffebee;
+  background-color: #ff9eac;
 }
 
 .user_picks_score_cell {

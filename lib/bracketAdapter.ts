@@ -1,27 +1,36 @@
 // bracketAdapter.ts
 import { Game as LibGame } from './types';
 
-// Create a type that matches what your Bracket component expects
-export interface BracketGame {
-  id: number;          // Required, not optional
-  round: string;
+// Update your interface to match what Bracket now expects
+export interface BracketMatch {
+  id: number;
+  round: number;      // Changed from string to number
   region: string;
-  team1Id: number;     // Required number, not null
-  team2Id: number;     // Required number, not null
+  team1Id: number;
+  team2Id: number;
   winnerId: number | null;
   team1Score?: number | null;
   team2Score?: number | null;
-  completed?: boolean;
+  completed: boolean;
 }
 
-// This function converts from your lib/types.ts Game to the Bracket component's Game type
-export function adaptGamesToBracket(games: LibGame[]): BracketGame[] {
+// Map round names to numbers
+const roundToNumberMap: Record<string, number> = {
+  'Round of 64': 1,
+  'Round of 32': 2,
+  'Sweet 16': 3,
+  'Elite 8': 4,
+  'Final Four': 5,
+  'Championship': 6
+};
+
+// Update the function to return BracketMatch[] instead of BracketGame[]
+export function adaptGamesToBracket(games: LibGame[]): BracketMatch[] {
   return games.map(game => ({
-    // Ensure id is always a number (if undefined, use a negative number)
     id: game.id ?? -(Math.floor(Math.random() * 10000) + 1),
-    round: game.round,
+    // Convert string round to number
+    round: typeof game.round === 'string' ? roundToNumberMap[game.round] || 0 : 0,
     region: game.region,
-    // Ensure team IDs are always numbers (if null, use 0)
     team1Id: game.team1Id ?? 0,
     team2Id: game.team2Id ?? 0,
     winnerId: game.winnerId,

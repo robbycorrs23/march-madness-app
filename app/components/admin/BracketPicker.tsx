@@ -35,7 +35,19 @@ interface MatchPick {
 interface BracketPickerProps {
   tournamentId: number;
   participantId: number | string;
+  isAdmin?: boolean; // Flag to indicate if the user is admin
 }
+
+// Map round names to numeric values
+const roundMap = {
+  'Pre-Tournament': 0,
+  'Round of 64': 1,
+  'Round of 32': 2,
+  'Sweet 16': 3,
+  'Elite 8': 4,
+  'Final Four': 5,
+  'Championship': 6
+};
 
 // Convert round number to display name
 const getRoundName = (round: number): string => {
@@ -63,11 +75,16 @@ const getPointsForRound = (round: number): number => {
   }
 };
 
-const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participantId }) => {
+const BracketPicker: React.FC<BracketPickerProps> = ({ 
+  tournamentId, 
+  participantId,
+  isAdmin = false 
+}) => {
   // State
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -135,6 +152,12 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
         setTeams(teamsData);
         setMatches(matchesData);
         setTournament(tournamentData);
+        
+        // Show admin warning if tournament has started
+        if (isAdmin && tournamentData.currentRound !== 'Pre-Tournament') {
+          setWarning('⚠️ WARNING: Tournament has started. Any changes to picks will be logged for integrity purposes.');
+        }
+        
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -155,17 +178,59 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [tournamentId, participantId]);
+  }, [tournamentId, participantId, isAdmin]);
 
   // Get team by ID
   const getTeamById = (teamId: number): Team | undefined => {
     return teams.find(team => team.id === teamId);
   };
 
+  // Function to log admin edits
+  const logAdminEdit = async (matchId: number, teamId: number, previousTeamId?: number) => {
+    if (!isAdmin || !tournament || tournament.currentRound === 'Pre-Tournament') {
+      return; // Only log if admin and tournament has started
+    }
+    
+    try {
+      await fetch('/api/admin/log-edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participantId,
+          matchId,
+          teamId,
+          previousTeamId
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to log admin edit:', error);
+    }
+  };
+
   // Handle team selection for a match with auto-save
   const handleTeamSelect = async (matchId: number, teamId: number) => {
     // Don't allow selection while saving
     if (savingPickId === matchId) return;
+    
+    // Check if this is a change to an existing pick
+    const existingPick = picks.find(pick => pick.matchId === matchId);
+    const previousTeamId = existingPick?.teamId;
+    
+    // Find the match to check its round
+    const match = matches.find(m => m.id === matchId);
+    
+    // Check if tournament has started and this match's round is active or past
+    const tournamentStarted = tournament?.currentRound !== 'Pre-Tournament';
+    const currentRoundNumber = tournament?.currentRound ? roundMap[tournament.currentRound as keyof typeof roundMap] : 0;
+    const matchRound = match?.round || 0;
+    
+    // Log warning for admin if editing picks after tournament started
+    if (isAdmin && tournamentStarted && matchRound <= currentRoundNumber) {
+      // Log the edit for accountability
+      await logAdminEdit(matchId, teamId, previousTeamId);
+    }
     
     // Update local state
     const newPicks = [...picks.filter(pick => pick.matchId !== matchId), { matchId, teamId }];
@@ -247,12 +312,29 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
     touchEndX.current = null;
   };
   
+  // Check if a match is editable
+  const isMatchEditable = (match: Match): boolean => {
+    if (!tournament) return true;
+    
+    // If we're not in tournament yet, all matches are editable
+    if (tournament.currentRound === 'Pre-Tournament') return true;
+    
+    // Get numeric values for rounds
+    const currentRoundNumber = roundMap[tournament.currentRound as keyof typeof roundMap] || 0;
+    const matchRoundNumber = match.round;
+    
+    // Only allow editing future rounds
+    return matchRoundNumber > currentRoundNumber;
+  };
+  
   // Render a single matchup
   const renderMatchup = (match: Match) => {
     const team1 = getTeamById(match.team1Id);
     const team2 = getTeamById(match.team2Id);
     
     if (!team1 || !team2) return null;
+    
+    const editable = isAdmin || isMatchEditable(match);
     
     return (
       <div key={match.id} className="bracket-matchup">
@@ -262,8 +344,11 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
         </div>
         
         <div 
-          className={`bracket-team ${isTeamSelected(match.id, team1.id) ? 'bracket-team-selected' : ''} ${savingPickId === match.id ? 'bracket-team-saving' : ''}`}
-          onClick={() => handleTeamSelect(match.id, team1.id)}
+          className={`bracket-team 
+            ${isTeamSelected(match.id, team1.id) ? 'bracket-team-selected' : ''} 
+            ${savingPickId === match.id ? 'bracket-team-saving' : ''}
+            ${!editable ? 'bracket-team-locked' : ''}`}
+          onClick={() => editable && handleTeamSelect(match.id, team1.id)}
         >
           <span className="bracket-seed">{team1.seed}</span>
           <span className="bracket-team-name">{team1.name}</span>
@@ -273,13 +358,20 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
         <div className="bracket-vs">vs</div>
         
         <div 
-          className={`bracket-team ${isTeamSelected(match.id, team2.id) ? 'bracket-team-selected' : ''} ${savingPickId === match.id ? 'bracket-team-saving' : ''}`}
-          onClick={() => handleTeamSelect(match.id, team2.id)}
+          className={`bracket-team 
+            ${isTeamSelected(match.id, team2.id) ? 'bracket-team-selected' : ''} 
+            ${savingPickId === match.id ? 'bracket-team-saving' : ''}
+            ${!editable ? 'bracket-team-locked' : ''}`}
+          onClick={() => editable && handleTeamSelect(match.id, team2.id)}
         >
           <span className="bracket-seed">{team2.seed}</span>
           <span className="bracket-team-name">{team2.name}</span>
           {match.winnerId === team2.id && <span className="bracket-winner-badge">Winner</span>}
         </div>
+        
+        {!editable && !isAdmin && (
+          <div className="bracket-lock-indicator">🔒 Locked</div>
+        )}
       </div>
     );
   };
@@ -372,7 +464,7 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
     <div className="bracket-picker-container">
       <div className="bracket-header">
         <h2 className="bracket-title">
-          {tournament?.name} {tournament?.year} Bracket
+          {tournament?.name} Bracket
         </h2>
         
         <div className="bracket-view-toggle">
@@ -390,6 +482,18 @@ const BracketPicker: React.FC<BracketPickerProps> = ({ tournamentId, participant
           </button>
         </div>
       </div>
+      
+      {/* Tournament status */}
+      {tournament && (
+        <div className="bracket-tournament-status">
+          Current Tournament Status: <strong>{tournament.currentRound}</strong>
+        </div>
+      )}
+      
+      {/* Admin warning */}
+      {warning && (
+        <div className="bracket-warning-message">{warning}</div>
+      )}
       
       {/* Message displays */}
       {error && <div className="bracket-error-message">{error}</div>}

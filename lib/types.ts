@@ -46,3 +46,15 @@ export interface Participant {
   totalPoints?: number;
   paid?: boolean;
 }
+
+export interface Match {
+  id: number;
+  round: number;  // Note: this is a number, not a string like in Game
+  region: string;
+  team1Id: number;
+  team2Id: number;
+  winnerId: number | null;
+  team1Score?: number | null;
+  team2Score?: number | null;
+  completed: boolean;
+}

@@ -120,6 +120,49 @@ const ParticipantList: React.FC<ParticipantListProps> = ({ participants, onUpdat
       participant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       participant.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  
+  const refreshScores = async () => {
+	  setLoading(true);
+	  setError('');
+	  setSuccess('');
+	  try {
+		// First calculate scores
+		const calculateResponse = await fetch('/api/scores/calculate', {
+		  method: 'POST',
+		  headers: {
+			'Content-Type': 'application/json',
+		  },
+		});
+		
+		if (!calculateResponse.ok) {
+		  const errorData = await calculateResponse.json();
+		  throw new Error(errorData.error || 'Failed to calculate scores');
+		}
+		
+		// Then fetch participants again to get updated scores
+		const participantsResponse = await fetch('/api/participants');
+		if (!participantsResponse.ok) {
+		  throw new Error('Failed to refresh participants data');
+		}
+		
+		const participantsData = await participantsResponse.json();
+		
+		// Use your existing onUpdate function to update the participants list
+		onUpdate({ 
+		  id: 'refresh', 
+		  name: 'Refresh',
+		  totalScore: 0,
+		  email: '',
+		  paid: false
+		}, 'refresh');
+		
+		setSuccess('Scores calculated and refreshed successfully');
+	  } catch (error) {
+		setError(error instanceof Error ? error.message : String(error));
+	  } finally {
+		setLoading(false);
+	  }
+	};
 
   // If viewing picks for a specific participant, show the picks component
   if (viewingPicksFor !== null) {
@@ -269,8 +312,10 @@ const ParticipantList: React.FC<ParticipantListProps> = ({ participants, onUpdat
                     {participant.email}
                   </td>
                   <td className="participant-table-cell">
-                    {participant.totalScore}
-                  </td>
+					  {participant.totalScore !== undefined ? 
+						participant.totalScore : 
+						<span className="participant-no-score">No score</span>}
+					</td>
                   <td className="participant-table-cell">
                     <div className="participant-payment-status">
                       <label className="participant-toggle-container">
@@ -315,3 +360,8 @@ const ParticipantList: React.FC<ParticipantListProps> = ({ participants, onUpdat
 };
 
 export default ParticipantList;
+
+
+
+
+

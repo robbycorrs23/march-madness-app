@@ -8,36 +8,58 @@ interface Team {
   name: string;
   seed: number | string;
   region?: string;
+  eliminated?: boolean;
 }
 
-interface Game {
+interface Match {
   id: number;
-  round: string;
+  round: number; // Match uses numeric round (1, 2, 3, etc.) instead of string
   region: string;
   team1Id: number;
   team2Id: number;
   winnerId: number | null;
   team1Score?: number | null;
   team2Score?: number | null;
+  completed: boolean;
 }
 
 interface BracketProps {
-  games: Game[];
+  matches: Match[];
   teams: Team[];
   currentRound: string;
 }
 
-interface GameDisplayProps {
-  game: Game;
+interface MatchDisplayProps {
+  match: Match;
 }
 
-interface OrganizedGames {
+interface OrganizedMatches {
   [round: string]: {
-    [region: string]: Game[];
+    [region: string]: Match[];
   };
 }
 
-const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
+// Map numeric round values to names
+const roundNameMap: { [key: number]: string } = {
+  1: 'Round of 64',
+  2: 'Round of 32',
+  3: 'Sweet 16',
+  4: 'Elite 8',
+  5: 'Final Four',
+  6: 'Championship'
+};
+
+// Map round names to their numeric values
+const roundNumberMap: { [key: string]: number } = {
+  'Round of 64': 1,
+  'Round of 32': 2,
+  'Sweet 16': 3,
+  'Elite 8': 4,
+  'Final Four': 5,
+  'Championship': 6
+};
+
+const Bracket: React.FC<BracketProps> = ({ matches, teams, currentRound }) => {
   const [selectedRegion, setSelectedRegion] = useState('All');
   const [zoomLevel, setZoomLevel] = useState(100);
   const bracketRef = useRef<HTMLDivElement>(null);
@@ -115,9 +137,14 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
     return teams.find(team => team.id === teamId) || { id: 0, name: 'TBD', seed: '-' };
   };
   
-  // Filter and organize games by round and region
-  const organizedGames = (): OrganizedGames => {
-    const organized: OrganizedGames = {};
+  // Get the round name from a numeric round value
+  const getRoundName = (roundNumber: number): string => {
+    return roundNameMap[roundNumber] || `Round ${roundNumber}`;
+  };
+  
+  // Filter and organize matches by round and region
+  const organizedMatches = (): OrganizedMatches => {
+    const organized: OrganizedMatches = {};
     rounds.forEach(round => {
       organized[round] = {};
       regions.forEach(region => {
@@ -129,14 +156,24 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
       }
     });
     
-    // Sort games into their respective rounds and regions
-    games.forEach(game => {
-      if (game.round === 'Final Four' || game.round === 'Championship') {
-        organized[game.round]['Final'].push(game);
-      } else if (organized[game.round] && organized[game.round][game.region]) {
-        organized[game.round][game.region].push(game);
+    // Sort matches into their respective rounds and regions
+    matches.forEach(match => {
+      const roundName = getRoundName(match.round);
+      
+      if (roundName === 'Final Four' || roundName === 'Championship') {
+        organized[roundName]['Final'].push(match);
+      } else if (organized[roundName] && organized[roundName][match.region]) {
+        organized[roundName][match.region].push(match);
       }
     });
+    
+    // Sort matches within each round and region
+    for (const round in organized) {
+      for (const region in organized[round]) {
+        // Sort matches by ID to ensure consistent order
+        organized[round][region].sort((a, b) => a.id - b.id);
+      }
+    }
     
     return organized;
   };
@@ -149,40 +186,110 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
     return true;
   };
   
-  // Determine if a game should be highlighted as part of the current round
+  // Determine if a match should be highlighted as part of the current round
   const isCurrentRound = (roundName: string): boolean => roundName === currentRound;
   
-  // Format game display
-  const GameDisplay: React.FC<GameDisplayProps> = ({ game }) => {
-    const team1 = getTeam(game.team1Id);
-    const team2 = getTeam(game.team2Id);
-    const winner = game.winnerId ? getTeam(game.winnerId) : null;
+  // Format match display
+  const MatchDisplay: React.FC<MatchDisplayProps> = ({ match }) => {
+    const team1 = getTeam(match.team1Id);
+    const team2 = getTeam(match.team2Id);
+    const winner = match.winnerId ? getTeam(match.winnerId) : null;
+    
+    // Find the corresponding match in the next round that this winner advances to
+    const findNextRoundMatch = (): Match | undefined => {
+      if (!match.winnerId || !match.completed) return undefined;
+      
+      const currentRoundNumber = match.round;
+      const nextRoundNumber = currentRoundNumber + 1;
+      
+      // Find matches in the next round
+      const nextRoundMatches = matches.filter(m => m.round === nextRoundNumber);
+      
+      // If this is a Final Four or Championship match, look for specific next round
+      if (currentRoundNumber >= 5) {
+        for (const nextMatch of nextRoundMatches) {
+          if (nextMatch.team1Id === match.winnerId || nextMatch.team2Id === match.winnerId) {
+            return nextMatch;
+          }
+        }
+        return undefined;
+      }
+      
+      // For regional rounds, find the match in the same region
+      const sameRegionMatches = nextRoundMatches.filter(m => m.region === match.region);
+      
+      // Determine which match in the next round this winner would go to
+      // This requires knowing the bracket structure
+      // Typically, winners of matches 1&2 go to match 1 in next round,
+      // winners of matches 3&4 go to match 2 in next round, etc.
+      
+      // Group matches by ID to determine which pairs feed into which next round match
+      const matchPairs: Record<number, Match[]> = {};
+      const currentRoundMatches = matches.filter(m => 
+        m.round === currentRoundNumber && m.region === match.region
+      ).sort((a, b) => a.id - b.id);
+      
+      // Pair matches (every 2 matches feed into 1 next round match)
+      for (let i = 0; i < currentRoundMatches.length; i += 2) {
+        const nextMatchIndex = Math.floor(i / 2);
+        if (nextMatchIndex < sameRegionMatches.length) {
+          const nextMatchId = sameRegionMatches[nextMatchIndex].id;
+          if (!matchPairs[nextMatchId]) {
+            matchPairs[nextMatchId] = [];
+          }
+          matchPairs[nextMatchId].push(currentRoundMatches[i]);
+          if (i + 1 < currentRoundMatches.length) {
+            matchPairs[nextMatchId].push(currentRoundMatches[i + 1]);
+          }
+        }
+      }
+      
+      // Find which next round match this match feeds into
+      for (const nextMatchId in matchPairs) {
+        if (matchPairs[nextMatchId].some(m => m.id === match.id)) {
+          const nextMatch = sameRegionMatches.find(m => m.id === parseInt(nextMatchId));
+          return nextMatch;
+        }
+      }
+      
+      return undefined;
+    };
+    
+    // Has this winner been advanced to the next round?
+    const nextMatch = findNextRoundMatch();
+    const hasAdvanced = nextMatch && 
+      (nextMatch.team1Id === match.winnerId || nextMatch.team2Id === match.winnerId);
     
     return (
-      <div className={`bracket-game ${isCurrentRound(game.round) ? 'current-round' : ''}`}>
-        <div className={`bracket-team ${game.winnerId === game.team1Id ? 'winner' : ''}`}>
+      <div className={`bracket-match ${isCurrentRound(getRoundName(match.round)) ? 'current-round' : ''}`}>
+        <div className={`bracket-team ${match.winnerId === match.team1Id ? 'winner' : ''}`}>
           <div className="bracket-team-info">
             <span className="bracket-seed">{team1.seed}</span>
             <span className="bracket-team-name">{team1.name}</span>
           </div>
-          {game.team1Score !== null && game.team1Score !== undefined && (
-            <span className="bracket-score">{game.team1Score}</span>
+          {match.team1Score !== null && match.team1Score !== undefined && (
+            <span className="bracket-score">{match.team1Score}</span>
           )}
         </div>
-        <div className={`bracket-team ${game.winnerId === game.team2Id ? 'winner' : ''}`}>
+        <div className={`bracket-team ${match.winnerId === match.team2Id ? 'winner' : ''}`}>
           <div className="bracket-team-info">
             <span className="bracket-seed">{team2.seed}</span>
             <span className="bracket-team-name">{team2.name}</span>
           </div>
-          {game.team2Score !== null && game.team2Score !== undefined && (
-            <span className="bracket-score">{game.team2Score}</span>
+          {match.team2Score !== null && match.team2Score !== undefined && (
+            <span className="bracket-score">{match.team2Score}</span>
           )}
         </div>
+        {match.completed && match.winnerId && hasAdvanced && (
+          <div className="bracket-advancement">
+            <span>→ {getTeam(match.winnerId).name} advances</span>
+          </div>
+        )}
       </div>
     );
   };
 
-  const organized = organizedGames();
+  const organized = organizedMatches();
   
   return (
     <div className="bracket-wrapper">
@@ -232,8 +339,8 @@ const Bracket: React.FC<BracketProps> = ({ games, teams, currentRound }) => {
                 displayRegion(region, round) && (
                   <div key={`${round}-${region}`} className="mb-6">
                     {region !== 'Final' && <h4 className="bracket-region-title">{region}</h4>}
-                    {organized[round][region]?.map(game => (
-                      <GameDisplay key={game.id} game={game} />
+                    {organized[round][region]?.map(match => (
+                      <MatchDisplay key={match.id} match={match} />
                     ))}
                   </div>
                 )

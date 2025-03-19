@@ -9,6 +9,15 @@ import { Tournament, Team, Game } from '../lib/types';
 import { generateBracketGames } from '../lib/bracketUtils';
 import { adaptGamesToBracket } from '../lib/bracketAdapter';
 
+const roundToNumberMap: Record<string, number> = {
+  'Round of 64': 1,
+  'Round of 32': 2,
+  'Sweet 16': 3,
+  'Elite 8': 4,
+  'Final Four': 5,
+  'Championship': 6
+};
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('bracket');
   const [games, setGames] = useState<Game[]>([]);
@@ -115,7 +124,6 @@ export default function Home() {
         </div>
       </div>
       
-      {/* Site content wrapper - this is the key addition */}
       <div className="site-content">
         <section className="container py-4">
           {activeTab === 'bracket' && (
@@ -134,7 +142,7 @@ export default function Home() {
 					) : teams.length > 0 ? (
 					  <div>
 						<Bracket
-						  games={adaptGamesToBracket(games.length > 0 ? games : generateBracketGames(teams))}
+						  matches={adaptGamesToBracket(games.length > 0 ? games : generateBracketGames(teams))}
 						  teams={teams}
 						  currentRound={currentRound}
 						/>
@@ -164,7 +172,7 @@ export default function Home() {
           {activeTab === 'picks' && (
             <div className="slide-in-up">
               <div className="section-heading">
-                <h2>Make Your Picks</h2>
+                <h2>USER PICKS</h2>
               </div>
               <PickSubmissionForm />
             </div>
