@@ -42,7 +42,6 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
             <div className="admin-card-header">Tournament Details</div>
             <div className="admin-card-body">
               <TournamentSetup 
-                // Use type assertion to bypass TypeScript's type checking
                 existingTournament={adaptTournamentData() as any} 
                 onSetupComplete={(tournament) => {
                   // Convert back to the expected type
@@ -59,7 +58,7 @@ const TournamentManagement: React.FC<TournamentManagementProps> = ({
             <div className="admin-card-header">Team Management</div>
             <div className="admin-card-body">
               <TeamManagement 
-                tournamentId={tournamentData.id} 
+                tournamentId={Number(tournamentData.id)}
               />
             </div>
           </div>

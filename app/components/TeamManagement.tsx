@@ -3,20 +3,20 @@ import { useState, useEffect } from 'react';
 
 // Define TypeScript interfaces
 interface Team {
-  id: string | number;
+  id: number;
   name: string;
-  seed: number | string;
+  seed: number;
   region: string;
 }
 
 interface NewTeam {
   name: string;
-  seed: number | string;
+  seed: number;
   region: string;
 }
 
 interface TeamManagementProps {
-  tournamentId: number | string;
+  tournamentId: number;
 }
 
 interface TeamsByRegion {
@@ -32,7 +32,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
   const [csvData, setCsvData] = useState<any[] | null>(null);
   const [newTeam, setNewTeam] = useState<NewTeam>({
     name: '',
-    seed: '',
+    seed: 1,  // Initialize with a valid number
     region: ''
   });
 
@@ -115,7 +115,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
     const { name, value } = e.target;
     setNewTeam({
       ...newTeam,
-      [name]: name === 'seed' ? (value === '' ? '' : parseInt(value)) : value
+      [name]: name === 'seed' ? (value === '' ? 1 : Number(value)) : value
     });
   };
 
@@ -123,45 +123,45 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
   const addTeam = (e: React.FormEvent) => {
     e.preventDefault();
     // Validate input
-    if (!newTeam.name || !newTeam.seed || !newTeam.region) {
+    if (!newTeam.name || !newTeam.region) {
       setError('All fields are required');
       return;
     }
-    if (isNaN(Number(newTeam.seed)) || Number(newTeam.seed) < 1 || Number(newTeam.seed) > 16) {
+    if (isNaN(newTeam.seed) || newTeam.seed < 1 || newTeam.seed > 16) {
       setError('Seed must be a number between 1 and 16');
       return;
     }
-    // Add to teams list
+    // Add to teams list with a temporary numeric ID
     const teamToAdd: Team = {
       ...newTeam,
-      id: `temp-${Date.now()}` // Temporary ID for UI purposes
+      id: -Date.now()  // Use negative numbers for temporary IDs
     };
     setTeams([...teams, teamToAdd]);
-    setNewTeam({ name: '', seed: '', region: '' });
+    setNewTeam({ name: '', seed: 1, region: '' });
     setSuccess('Team added successfully');
   };
 
   // Remove a team
-  const removeTeam = async (teamId: string | number) => {
-	  // Only make API call for permanent IDs (not temporary ones)
-	  if (!teamId.toString().startsWith('temp-')) {
-		try {
-		  const response = await fetch(`/api/teams?id=${teamId}`, {
-			method: 'DELETE'
-		  });
-		  if (!response.ok) {
-			throw new Error('Failed to delete team');
-		  }
-		} catch (error) {
-		  setError(error instanceof Error ? error.message : String(error));
-		  return; // Don't update state if API call fails
-		}
-	  }
-	  
-	  // Update UI state
-	  setTeams(teams.filter(team => team.id !== teamId));
-	  setSuccess('Team removed');
-	};
+  const removeTeam = async (teamId: number) => {
+    // Only make API call for permanent IDs (positive numbers)
+    if (teamId > 0) {
+      try {
+        const response = await fetch(`/api/teams?id=${teamId}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) {
+          throw new Error('Failed to delete team');
+        }
+      } catch (error) {
+        setError(error instanceof Error ? error.message : String(error));
+        return; // Don't update state if API call fails
+      }
+    }
+    
+    // Update UI state
+    setTeams(teams.filter(team => team.id !== teamId));
+    setSuccess('Team removed');
+  };
 
   // Import teams from CSV
   const importTeamsFromCSV = () => {
@@ -169,10 +169,11 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
       setError('No CSV data to import');
       return;
     }
-    // Add to teams list with temporary IDs
-    const teamsToAdd: Team[] = csvData.map(team => ({
+    // Add to teams list with temporary numeric IDs
+    const teamsToAdd: Team[] = csvData.map((team, index) => ({
       ...team,
-      id: `temp-${Date.now()}-${Math.random()}` // Temporary ID for UI purposes
+      id: -(Date.now() + index),  // Use negative numbers for temporary IDs
+      seed: Number(team.seed)  // Ensure seed is a number
     }));
     setTeams([...teams, ...teamsToAdd]);
     setCsvData(null);
@@ -185,10 +186,7 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
       setError('No teams to save');
       return;
     }
-    if (!tournamentId) {
-      setError('Tournament ID is required');
-      return;
-    }
+    
     setLoading(true);
     try {
       const response = await fetch('/api/teams', {
@@ -197,14 +195,21 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          tournamentId,
-          teams: teams.map(({ id, ...team }) => team) // Remove temporary IDs
+          tournamentId: Number(tournamentId),
+          teams: teams.map(({ id, ...team }) => ({
+            ...team,
+            seed: Number(team.seed)
+          }))
         })
       });
+      
       if (!response.ok) {
-        throw new Error('Failed to save teams');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save teams');
       }
+      
       setSuccess('Teams saved successfully');
+      
       // Generate initial bracket
       const bracketResponse = await fetch('/api/tournament/generate-bracket', {
         method: 'POST',
@@ -212,12 +217,14 @@ const TeamManagement: React.FC<TeamManagementProps> = ({ tournamentId }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          tournamentId
+          tournamentId: Number(tournamentId)
         })
       });
+      
       if (!bracketResponse.ok) {
         throw new Error('Failed to generate bracket');
       }
+      
       setSuccess('Teams saved and bracket generated successfully');
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));

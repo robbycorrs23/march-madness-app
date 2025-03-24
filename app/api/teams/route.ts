@@ -9,6 +9,11 @@ type TeamInput = {
   region: string;
 };
 
+type TeamsRequestData = {
+  teams: TeamInput[];
+  tournamentId: number;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -20,21 +25,20 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse the request body
-    const data = await request.json();
+    const data = await request.json() as TeamsRequestData;
     
     // Validate input
-    if (!data.teams || !Array.isArray(data.teams) || !data.tournamentId) {
+    if (!data.teams || !Array.isArray(data.teams) || typeof data.tournamentId !== 'number') {
       return NextResponse.json(
-        { error: 'Invalid team data or missing tournament ID' },
+        { error: 'Invalid team data or missing/invalid tournament ID' },
         { status: 400 }
       );
     }
     
     // First, delete all existing teams for this tournament
-    // This ensures removed teams are actually deleted
     await prisma.team.deleteMany({
       where: { 
-        tournamentId: data.tournamentId 
+        tournamentId: data.tournamentId
       }
     });
     

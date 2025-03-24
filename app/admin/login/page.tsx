@@ -15,17 +15,24 @@ export default function AdminLogin() {
     setLoading(true);
     setError('');
     try {
+      console.log('Attempting to sign in...');
       const result = await signIn('credentials', {
         password,
         redirect: false,
+        callbackUrl: '/admin'
       });
+      
+      console.log('Sign in result:', result);
 
       if (result?.error) {
-        setError('Invalid password');
-      } else {
+        console.error('Sign in error:', result.error);
+        setError('Invalid password. Please try again.');
+      } else if (result?.ok) {
+        console.log('Sign in successful, redirecting...');
         router.push('/admin');
       }
     } catch (error) {
+      console.error('Sign in error:', error);
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -66,6 +73,7 @@ export default function AdminLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="form-control"
                   required
+                  autoComplete="current-password"
                 />
               </div>
               <button

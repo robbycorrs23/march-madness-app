@@ -1,0 +1,19 @@
+Round of 64 to Round of 32 (for each region)
+At the top of the bracket in each region should be the 1seed v 16seed, then the next matchup down should be the 8seed v 9seed. Those two seeds will play each other in the round of 32 (no matter which seed wins). So the bracket in the round of 32 that is next to those matchups will either have the 1or16seed on top and the 8or9seed will be on the bottom only.
+Then the next two brackets below in the round of 64 are the 5seed vs 12seed and the 4seed vs 13seed. Those two seeds will play each other in the next round regardless of the winner. So the bracket in the round of 32 that is next to those matchups will either have the 5or12seed on top and the 4or13seed will be on the bottom only.
+Then the next two brackets below in the round of 64 are the 6seed vs 11seed and the 3seed vs 14seed. Those two seeds will play each other in the next round regardless of the winner. So the bracket in the round of 32 that is next to those matchups will either have the 6or11seed on top and the 3or14seed will be on the bottom only.
+Then the next two brackets below in the round of 64 are the 7seed vs 10seed and the 2seed vs 15seed. Those two seeds will play each other in the next round regardless of the winner. So the bracket in the round of 32 that is next to those matchups will either have the 7or10seed on top and the 2or15seed will be on the bottom only.
+Round of 32 to Sweet 16 (for each region)
+At the top of the round of 32, you'll have either the 1or16seed playing against the 8or9seed. The winner of this matchup will advance to the Sweet 16 bracket on the top.
+Below that, you'll have either the 5or12seed playing against the 4or13seed. The winner of this matchup will also advance to the Sweet 16, where they'll face the winner of the 1or16seed vs 8or9seed matchup.
+In the third section, you'll have either the 6or11seed playing against the 3or14seed. The winner of this matchup will advance to the Sweet 16 bracket on the bottom half of the region.
+In the fourth section, you'll have either the 7or10seed playing against the 2or15seed. The winner of this matchup will also advance to the Sweet 16, where they'll face the winner of the 6or11seed vs 3or14seed matchup.
+Sweet 16 to Elite 8 (for each region)
+In the Sweet 16, the top bracket will feature either the 1or16or8or9seed playing against either the 5or12or4or13seed. The winner of this matchup will advance to the Elite 8 (Regional Final) and occupy the top spot in that bracket.
+In the bottom Sweet 16 bracket, either the 6or11or3or14seed will play against either the 7or10or2or15seed. The winner of this matchup will advance to the Elite 8 (Regional Final) and occupy the bottom spot in that bracket.
+Elite 8 to Final Four
+In the Elite 8 (Regional Finals), each region will have its top surviving team (from seeds 1,16,8,9,5,12,4,13) playing against its bottom surviving team (from seeds 6,11,3,14,7,10,2,15). The winner of each regional final advances to the Final Four as that region's champion.
+Final Four to Championship
+The Final Four consists of the four regional champions. Traditionally, the bracket places the winner of the East region against the winner of the West region in one semifinal, and the winner of the South region against the winner of the Midwest region in the other semifinal.
+The winners of these two semifinal games will advance to face each other in the championship game to determine the national champion.
+Throughout the entire bracket, each matchup feeds into the next round in a predetermined path, regardless of which seeds advance. The bracket maintains its structure from the Round of 64 all the way to the championship game, with each round having half as many games as the previous round. 

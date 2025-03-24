@@ -33,6 +33,15 @@ export type Participant = {
   cinderellaScore?: number;
 };
 
+interface Tournament {
+  id: number;
+  name: string;
+  year: number;
+  entryFee: number;
+  currentRound: string;
+  regions: string[];
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -42,6 +51,7 @@ export default function AdminDashboard() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -99,6 +109,34 @@ export default function AdminDashboard() {
     }
     setSuccess(`Participant ${action === 'add' ? 'added' : action === 'delete' ? 'removed' : 'updated'} successfully`);
     setTimeout(() => setSuccess(''), 3000);
+  };
+
+  // Create new tournament
+  const createTournament = async () => {
+    try {
+      const response = await fetch('/api/tournament', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'March Madness 2024',
+          year: 2024,
+          entryFee: 10.00,
+          currentRound: 'Round of 64',
+          regions: ['East', 'West', 'South', 'Midwest']
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create tournament');
+      }
+
+      const newTournament = await response.json();
+      setTournaments([...tournaments, newTournament]);
+    } catch (err) {
+      setError('Failed to create tournament');
+    }
   };
 
   if (status === 'loading') {
