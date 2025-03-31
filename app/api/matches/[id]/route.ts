@@ -330,14 +330,15 @@ export async function PATCH(
       }
     }
     
-    // If this is the Championship match and we have a winner, update eliminated status
-    if (winnerId !== undefined && existingMatch.round === 6) { // Championship round
-      console.log(`Updating eliminated status for Championship match ${matchId}`);
+    // If we have a winner, update eliminated status for the losing team
+    if (winnerId !== undefined && updatedMatch.completed) {
+      console.log(`Updating eliminated status for match ${matchId} in round ${existingMatch.round}`);
       
-      const losingTeamId = winnerId === updatedMatch.team1.id 
-        ? updatedMatch.team2.id 
-        : updatedMatch.team1.id;
+      const losingTeamId = winnerId === updatedMatch.team1Id 
+        ? updatedMatch.team2Id 
+        : updatedMatch.team1Id;
       
+      // Mark the losing team as eliminated
       await prisma.team.update({
         where: { id: losingTeamId },
         data: { eliminated: true }

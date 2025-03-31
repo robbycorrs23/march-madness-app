@@ -36,93 +36,84 @@ const MatchRow = ({
   teams: Team[], 
   onUpdateMatchState: (matchId: number, updates: Partial<Match>) => void
 }) => {
-  // Local state for each match row
-  const [winnerId, setWinnerId] = useState<string | number>(match.winnerId || '');
   const [team1Score, setTeam1Score] = useState<string | number>(match.team1Score || '');
   const [team2Score, setTeam2Score] = useState<string | number>(match.team2Score || '');
-  const [hasChanged, setHasChanged] = useState(false);
   
-  // Find teams
   const team1 = teams.find((team) => team.id === match.team1Id) || { id: 0, name: 'TBD', seed: '-' };
   const team2 = teams.find((team) => team.id === match.team2Id) || { id: 0, name: 'TBD', seed: '-' };
 
-  // Update local state when match props change
   useEffect(() => {
-    setWinnerId(match.winnerId || '');
     setTeam1Score(match.team1Score || '');
     setTeam2Score(match.team2Score || '');
-    setHasChanged(false);
-  }, [match.winnerId, match.team1Score, match.team2Score]);
-  
-  // When values change, update parent component
-  useEffect(() => {
-    if (hasChanged) {
-      // Create updates object with only the fields that have values
-      const updates: Partial<Match> = {};
-      
-      if (winnerId) {
-        updates.winnerId = Number(winnerId);
-      }
-      
-      if (team1Score !== '') {
-        updates.team1Score = Number(team1Score);
-      }
-      
-      if (team2Score !== '') {
-        updates.team2Score = Number(team2Score);
-      }
-      
-      // Only send update if we have at least one field
-      if (Object.keys(updates).length > 0) {
-        onUpdateMatchState(match.id, updates);
-      }
+  }, [match.team1Score, match.team2Score]);
+
+  const handleTeamClick = (teamId: number) => {
+    const updates: Partial<Match> = {
+      winnerId: teamId,
+      completed: true  // Set match as completed when winner is selected
+    };
+    
+    // If scores exist, include them in the update
+    if (team1Score !== '') {
+      updates.team1Score = Number(team1Score);
     }
-  }, [winnerId, team1Score, team2Score, hasChanged, match.id, onUpdateMatchState]);
-  
-  const handleWinnerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setWinnerId(e.target.value);
-    setHasChanged(true);
+    if (team2Score !== '') {
+      updates.team2Score = Number(team2Score);
+    }
+    
+    onUpdateMatchState(match.id, updates);
   };
 
   const handleTeam1ScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTeam1Score(e.target.value);
-    setHasChanged(true);
+    // Only update if there's already a winner selected
+    if (match.winnerId) {
+      onUpdateMatchState(match.id, { 
+        team1Score: e.target.value ? Number(e.target.value) : null,
+        team2Score: team2Score ? Number(team2Score) : null,
+        winnerId: match.winnerId
+      });
+    }
   };
 
   const handleTeam2ScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTeam2Score(e.target.value);
-    setHasChanged(true);
+    // Only update if there's already a winner selected
+    if (match.winnerId) {
+      onUpdateMatchState(match.id, { 
+        team1Score: team1Score ? Number(team1Score) : null,
+        team2Score: e.target.value ? Number(e.target.value) : null,
+        winnerId: match.winnerId
+      });
+    }
   };
 
   return (
     <tr key={match.id}>
       <td>{match.region}</td>
       <td>
-        <div className="game-management-team-info">
-          <span className="game-management-team-seed">{team1.seed}</span>
-          <span>{team1.name}</span>
-        </div>
-      </td>
-      <td>
-        <div className="game-management-team-info">
-          <span className="game-management-team-seed">{team2.seed}</span>
-          <span>{team2.name}</span>
-        </div>
-      </td>
-      <td>
-        <select
-          className="game-management-winner-select"
-          value={winnerId.toString()}
-          onChange={handleWinnerChange}
+        <button 
+          className={`game-management-team-button ${match.winnerId === team1.id ? 'winner' : ''}`}
+          onClick={() => handleTeamClick(team1.id)}
+          disabled={team1.id === 0}
         >
-          <option value="">-- Select Winner --</option>
-          <option value={team1.id.toString()}>
-            ({team1.seed}) {team1.name}
-          </option>
-          <option value={team2.id.toString()}>
-            ({team2.seed}) {team2.name}
-          </option>
-        </select>
+          <div className="game-management-team-info">
+            <span className="game-management-team-seed">{team1.seed}</span>
+            <span>{team1.name}</span>
+          </div>
+        </button>
+      </td>
+      <td>
+        <button 
+          className={`game-management-team-button ${match.winnerId === team2.id ? 'winner' : ''}`}
+          onClick={() => handleTeamClick(team2.id)}
+          disabled={team2.id === 0}
+        >
+          <div className="game-management-team-info">
+            <span className="game-management-team-seed">{team2.seed}</span>
+            <span>{team2.name}</span>
+          </div>
+        </button>
       </td>
       <td>
         <div className="game-management-score-inputs">
@@ -132,6 +123,7 @@ const MatchRow = ({
             value={team1Score.toString()}
             onChange={handleTeam1ScoreChange}
             min="0"
+            placeholder="Score"
           />
           <span>-</span>
           <input
@@ -140,6 +132,7 @@ const MatchRow = ({
             value={team2Score.toString()}
             onChange={handleTeam2ScoreChange}
             min="0"
+            placeholder="Score"
           />
         </div>
       </td>
@@ -161,7 +154,6 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [pendingUpdates, setPendingUpdates] = useState<{[key: number]: Partial<Match>}>({});
 
   const rounds = [
     'Round of 64',
@@ -202,52 +194,69 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
     fetchData();
   }, [currentRound]);
 
-  // Update match state in parent component
-  const handleUpdateMatchState = (matchId: number, updates: Partial<Match>) => {
-    setPendingUpdates(prev => ({
-      ...prev,
-      [matchId]: updates
-    }));
-  };
-
-  // Save all pending match updates
-  const saveAllResults = async () => {
+  // Update match state and save immediately
+  const handleUpdateMatchState = async (matchId: number, updates: Partial<Match>) => {
     try {
       setLoading(true);
-      // Prepare updates
-      const updatePromises = Object.entries(pendingUpdates).map(([matchId, updates]) => {
-        // Allow updates with partial data - don't require all fields to be filled
-        return fetch(`/api/matches/${matchId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-        });
+      const response = await fetch(`/api/matches/${matchId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
       });
 
-      // Execute all updates
-      const responses = await Promise.all(updatePromises);
-
-      // Check if any updates were successful
-      const someSuccessful = responses.some(response => response?.ok);
-
-      if (someSuccessful) {
-        // Refresh matches
-        const matchesResponse = await fetch(`/api/matches?round=${currentRound}`);
-        if (matchesResponse.ok) {
-          const matchesData = await matchesResponse.json();
-          setMatches(matchesData);
-        }
-        
-        // Clear pending updates
-        setPendingUpdates({});
-
-        setSuccessMessage('Match results saved successfully!');
-        setTimeout(() => setSuccessMessage(''), 3000);
-      } else {
-        throw new Error('Failed to save match results');
+      if (!response.ok) {
+        throw new Error('Failed to update match');
       }
+
+      // After updating the match, check if all matches in current round have winners
+      const matchesResponse = await fetch(`/api/matches?round=${currentRound}`);
+      if (matchesResponse.ok) {
+        const matchesData = await matchesResponse.json();
+        setMatches(matchesData);
+
+        // Check if all matches in current round have winners
+        const allMatchesComplete = matchesData.every((m: Match) => m.completed);
+        if (allMatchesComplete) {
+          // First generate next round matches
+          const generateResponse = await fetch('/api/tournament/generate-next-round', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              tournamentId,
+              currentRound
+            }),
+          });
+
+          if (generateResponse.ok) {
+            // Then advance the tournament to the next round
+            const nextRound = rounds[rounds.indexOf(currentRound) + 1];
+            if (nextRound) {
+              const advanceResponse = await fetch('/api/tournament/advance-round', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  tournamentId,
+                  nextRound
+                }),
+              });
+
+              if (advanceResponse.ok) {
+                setCurrentRound(nextRound);
+                setSuccessMessage(`Advanced to ${nextRound}!`);
+              }
+            }
+          }
+        }
+      }
+
+      setSuccessMessage('Match updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -268,9 +277,6 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
   // Count how many matches have winners
   const matchesWithWinners = matches.filter(match => match.winnerId !== null).length;
   const totalMatches = matches.length;
-
-  // Check if we have any pending updates
-  const hasPendingUpdates = Object.keys(pendingUpdates).length > 0;
 
   return (
     <div className="game-management-container">
@@ -322,41 +328,29 @@ const GameManagement: React.FC<GameManagementProps> = ({ tournamentId }) => {
             No matches found for this round.
           </div>
         ) : (
-          <>
-            <div className="game-management-matches-table-container">
-              <table className="game-management-matches-table">
-                <thead>
-                  <tr>
-                    <th>Region</th>
-                    <th>Team 1</th>
-                    <th>Team 2</th>
-                    <th>Winner</th>
-                    <th>Score</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matches.map((match) => (
-                    <MatchRow 
-                      key={match.id} 
-                      match={match} 
-                      teams={teams} 
-                      onUpdateMatchState={handleUpdateMatchState}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="game-management-save-all-container">
-              <button
-                onClick={saveAllResults}
-                className="game-management-btn game-management-btn-save-all"
-                disabled={loading || !hasPendingUpdates}
-              >
-                Save Results
-              </button>
-            </div>
-          </>
+          <div className="game-management-matches-table-container">
+            <table className="game-management-matches-table">
+              <thead>
+                <tr>
+                  <th>Region</th>
+                  <th>Team 1</th>
+                  <th>Team 2</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matches.map((match) => (
+                  <MatchRow 
+                    key={match.id} 
+                    match={match} 
+                    teams={teams} 
+                    onUpdateMatchState={handleUpdateMatchState}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

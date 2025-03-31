@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-next-round": "npx ts-node scripts/generate-next-round.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
@@ -29,6 +30,7 @@
     "@types/react-dom": "^19.0.4",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }
 }

@@ -93,6 +93,7 @@ model PreTournamentPick {
   participantId Int      @unique
   participant   Participant @relation(fields: [participantId], references: [id])
   score         Int      @default(0)
+  cinderellaScore Int    @default(0)  // Store Cinderella points separately
   
   finalFourPicks   FinalFourPick[]
   finalsPicks      FinalsPick[]
@@ -158,24 +159,27 @@ model GamePick {
 }
 
 model Match {
-  id          Int      @id @default(autoincrement())
-  round       Int
-  region      String
-  team1Id     Int
-  team2Id     Int
-  winnerId    Int?
+  id             Int      @id @default(autoincrement())
+  round          Int
+  region         String
+  team1Id        Int
+  team2Id        Int
+  winnerId       Int?
   
-  // Add these new fields:
-  team1Score  Int?
-  team2Score  Int?
-  completed   Boolean  @default(false)
+  // Add the bracketPosition field
+  bracketPosition String? // Format: [Region][Round][Position] (e.g., E21 = East, Round 2, Position 1)
+  
+  // Existing fields
+  team1Score     Int?
+  team2Score     Int?
+  completed      Boolean  @default(false)
   
   // Relations to Team model with cascade delete
-  team1       Team     @relation("MatchTeam1", fields: [team1Id], references: [id], onDelete: Cascade)
-  team2       Team     @relation("MatchTeam2", fields: [team2Id], references: [id], onDelete: Cascade)
-  winner      Team?    @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  team1          Team     @relation("MatchTeam1", fields: [team1Id], references: [id], onDelete: Cascade)
+  team2          Team     @relation("MatchTeam2", fields: [team2Id], references: [id], onDelete: Cascade)
+  winner         Team?    @relation("MatchWinner", fields: [winnerId], references: [id], onDelete: SetNull)
   
-  matchPicks  MatchPick[]
+  matchPicks     MatchPick[]
   
   @@map("matches")
 }

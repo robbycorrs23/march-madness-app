@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const roundParam = searchParams.get('round');
     
-    // Convert round name to round number
+    // Convert round name to round number if provided
     const roundMap: { [key: string]: number } = {
       'Round of 64': 1,
       'Round of 32': 2,
@@ -18,31 +18,23 @@ export async function GET(request: NextRequest) {
       'Championship': 6
     };
     
-    const round = roundMap[roundParam || 'Round of 64'];
+    // Build where clause based on whether round is specified
+    const where = roundParam ? { round: roundMap[roundParam] } : {};
 
-    // Fetch matches for the current round
+    // Fetch matches
     const matches = await prisma.match.findMany({
-      where: { round },
+      where,
       include: {
         team1: true,
         team2: true
-      }
+      },
+      orderBy: [
+        { round: 'asc' },
+        { region: 'asc' }
+      ]
     });
 
-    // Transform matches to match the existing Game interface in the frontend
-    const transformedMatches = matches.map(match => ({
-      id: match.id,
-      round: roundParam || 'Round of 64',
-      region: match.region,
-      team1Id: match.team1Id,
-      team2Id: match.team2Id,
-      winnerId: match.winnerId,
-      team1Score: null, // Matches don't have scores in this schema
-      team2Score: null,
-      completed: match.winnerId !== null
-    }));
-
-    return NextResponse.json(transformedMatches);
+    return NextResponse.json(matches);
   } catch (error) {
     console.error('Error fetching matches:', error);
     return NextResponse.json(

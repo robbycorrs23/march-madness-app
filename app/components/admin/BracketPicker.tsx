@@ -257,10 +257,10 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
       // Show brief success message
       setSuccess('Pick saved');
       
-      // Clear success message after 1.5 seconds
+      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(null);
-      }, 1500);
+      }, 3000);
       
     } catch (err) {
       // Set error message
@@ -486,7 +486,11 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
       {/* Tournament status */}
       {tournament && (
         <div className="bracket-tournament-status">
-          Current Tournament Status: <strong>{tournament.currentRound}</strong>
+          {success ? (
+            <div className="bracket-success-message">{success}</div>
+          ) : (
+            <>Current Tournament Status: <strong>{tournament.currentRound}</strong></>
+          )}
         </div>
       )}
       
@@ -495,9 +499,8 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
         <div className="bracket-warning-message">{warning}</div>
       )}
       
-      {/* Message displays */}
+      {/* Error message */}
       {error && <div className="bracket-error-message">{error}</div>}
-      {success && <div className="bracket-success-message">{success}</div>}
       
       {/* Render appropriate view based on mode */}
       {viewMode === 'mobile' ? renderMobileView() : renderDesktopView()}

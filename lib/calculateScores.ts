@@ -150,7 +150,7 @@ export async function calculateScores(tournamentId: number): Promise<void> {
         // Get the team to check its seed
         const team = await prisma.team.findUnique({
           where: { id: cinderellaPick.teamId },
-          select: { seed: true }
+          select: { seed: true, name: true }
         });
         
         // Only teams seeded 11-16 qualify as Cinderellas
@@ -166,7 +166,10 @@ export async function calculateScores(tournamentId: number): Promise<void> {
           // Double points for each win
           for (const win of teamWins) {
             const basePoints = roundPointsMap[win.round as keyof typeof roundPointsMap] || 0;
-            cinderellaScore += basePoints * 2;
+            const doubledPoints = basePoints * 2;
+            cinderellaScore += doubledPoints;
+            
+            console.log(`Cinderella points for ${team.name} (seed ${team.seed}) in round ${win.round}: ${basePoints} * 2 = ${doubledPoints}`);
           }
         }
       }
@@ -191,6 +194,13 @@ export async function calculateScores(tournamentId: number): Promise<void> {
       preTournamentScore + 
       cinderellaScore;
     
+    console.log(`Score breakdown for participant ${participant.id}:`);
+    console.log(`- Match picks: ${matchPicksTotal._sum.roundScore || 0}`);
+    console.log(`- Game picks: ${gamePicksTotal._sum.roundScore || 0}`);
+    console.log(`- Pre-tournament: ${preTournamentScore}`);
+    console.log(`- Cinderella: ${cinderellaScore}`);
+    console.log(`- Total: ${totalScore}`);
+    
     // Create a transaction for all updates
     const transactions = [];
     
@@ -202,7 +212,10 @@ export async function calculateScores(tournamentId: number): Promise<void> {
       transactions.push(
         prisma.preTournamentPick.update({
           where: { id: preTournamentPick.id },
-          data: { score: preTournamentScore }
+          data: { 
+            score: preTournamentScore,
+            cinderellaScore // Store Cinderella score separately
+          }
         })
       );
     }

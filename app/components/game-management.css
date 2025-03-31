@@ -264,3 +264,42 @@
   background-color: #cbd5e0;
   cursor: not-allowed;
 }
+
+.game-management-team-button {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.game-management-team-button:hover {
+  background-color: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.game-management-team-button.winner {
+  background-color: #0A6FAC;
+  color: white;
+  border-color: #0A6FAC;
+}
+
+.game-management-team-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.game-management-team-button .game-management-team-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-management-team-button .game-management-team-seed {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+}

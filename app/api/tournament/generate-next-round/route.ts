@@ -10,6 +10,7 @@ interface Match {
   team1Id: number;
   team2Id: number;
   winnerId: number | null;
+  bracketPosition: string | null;
 }
 
 // Define type for matches grouped by region
@@ -17,10 +18,39 @@ interface MatchesByRegion {
   [region: string]: Match[];
 }
 
-// Define type for region winners
-interface RegionWinners {
-  [region: string]: number;
-}
+// Map region names to region codes
+const regionToCode: Record<string, string> = {
+  'East': 'E',
+  'West': 'W',
+  'South': 'S',
+  'Midwest': 'M',
+  'National': 'N'
+};
+
+// Define which Round 1 matchups feed into each Round 2 matchup
+const round2Feeds: Record<string, [string, string]> = {
+  '1': ['1', '2'],   // Winners of 1/16 vs 8/9
+  '2': ['3', '4'],   // Winners of 5/12 vs 4/13
+  '3': ['5', '6'],   // Winners of 6/11 vs 3/14
+  '4': ['7', '8']    // Winners of 7/10 vs 2/15
+};
+
+// Define which Round 2 matchups feed into each Sweet 16 matchup
+const round3Feeds: Record<string, [string, string]> = {
+  '1': ['1', '2'],   // Top half of region
+  '2': ['3', '4']    // Bottom half of region
+};
+
+// Define which Sweet 16 matchups feed into each Elite 8 matchup
+const round4Feeds: Record<string, [string, string]> = {
+  '1': ['1', '2']    // Region final
+};
+
+// Define which Elite 8 matchups feed into each Final Four matchup
+const round5Feeds: Record<string, [string, string]> = {
+  '1': ['E41', 'W41'],  // East vs West
+  '2': ['S41', 'M41']   // South vs Midwest
+};
 
 // Mapping of round names to numbers
 const ROUND_MAP: { [key: string]: number } = {
@@ -92,47 +122,159 @@ export async function POST(req: NextRequest) {
     // Generate next round matches
     const nextRoundMatches = [];
     
-    if (nextRoundNumber <= 5) { // Up to Final Four
-      // Group matches by region
-      const matchesByRegion: MatchesByRegion = {};
-      currentRoundMatches.forEach(match => {
-        if (!matchesByRegion[match.region]) {
-          matchesByRegion[match.region] = [];
-        }
-        matchesByRegion[match.region].push(match);
-      });
-      
-      // Create matchups
-      for (const region in matchesByRegion) {
-        const regionMatches = matchesByRegion[region];
-        
-        // Pair up winners
-        for (let i = 0; i < regionMatches.length; i += 2) {
-          const match1 = regionMatches[i];
-          const match2 = i + 1 < regionMatches.length ? regionMatches[i + 1] : null;
+    // Group matches by region
+    const matchesByRegion: MatchesByRegion = {};
+    currentRoundMatches.forEach(match => {
+      if (!matchesByRegion[match.region]) {
+        matchesByRegion[match.region] = [];
+      }
+      matchesByRegion[match.region].push(match);
+    });
+    
+    // Handle each round differently based on the bracket structure
+    switch (nextRoundNumber) {
+      case 2: // Round of 32
+        // Generate Round 2 matches for each region
+        for (const [region, matches] of Object.entries(matchesByRegion)) {
+          const regionCode = regionToCode[region];
           
-          if (match1 && match2 && match1.winnerId && match2.winnerId) {
+          // Create 4 Round 2 matches for each region
+          for (let position = 1; position <= 4; position++) {
+            const feeds = round2Feeds[position.toString()];
+            if (!feeds) continue;
+
+            const [feed1, feed2] = feeds;
+            
+            // Find the corresponding Round 1 matches
+            const match1 = matches.find(m => m.bracketPosition === `${regionCode}1${feed1}`);
+            const match2 = matches.find(m => m.bracketPosition === `${regionCode}1${feed2}`);
+
+            if (match1?.winnerId && match2?.winnerId) {
+              nextRoundMatches.push({
+                round: nextRoundNumber,
+                region: region,
+                team1Id: match1.winnerId,
+                team2Id: match2.winnerId,
+                bracketPosition: `${regionCode}2${position}`
+              });
+            }
+          }
+        }
+        break;
+        
+      case 3: // Sweet 16
+        // Generate Sweet 16 matches for each region
+        for (const [region, matches] of Object.entries(matchesByRegion)) {
+          const regionCode = regionToCode[region];
+          
+          // Create 2 Sweet 16 matches for each region
+          for (let position = 1; position <= 2; position++) {
+            const feeds = round3Feeds[position.toString()];
+            if (!feeds) continue;
+
+            const [feed1, feed2] = feeds;
+            
+            // Find the corresponding Round 2 matches
+            const match1 = matches.find(m => m.bracketPosition === `${regionCode}2${feed1}`);
+            const match2 = matches.find(m => m.bracketPosition === `${regionCode}2${feed2}`);
+
+            if (match1?.winnerId && match2?.winnerId) {
+              nextRoundMatches.push({
+                round: nextRoundNumber,
+                region: region,
+                team1Id: match1.winnerId,
+                team2Id: match2.winnerId,
+                bracketPosition: `${regionCode}3${position}`
+              });
+            }
+          }
+        }
+        break;
+        
+      case 4: // Elite 8
+        // Generate Elite 8 matches for each region
+        for (const [region, matches] of Object.entries(matchesByRegion)) {
+          const regionCode = regionToCode[region];
+          
+          // Create 1 Elite 8 match for each region
+          const feeds = round4Feeds['1'];
+          if (!feeds) continue;
+
+          const [feed1, feed2] = feeds;
+          
+          // Find the corresponding Sweet 16 matches
+          const match1 = matches.find(m => m.bracketPosition === `${regionCode}3${feed1}`);
+          const match2 = matches.find(m => m.bracketPosition === `${regionCode}3${feed2}`);
+
+          if (match1?.winnerId && match2?.winnerId) {
             nextRoundMatches.push({
               round: nextRoundNumber,
-              region: nextRoundNumber === 5 ? 'Final' : region,
+              region: region,
               team1Id: match1.winnerId,
-              team2Id: match2.winnerId
+              team2Id: match2.winnerId,
+              bracketPosition: `${regionCode}41`
             });
           }
         }
-      }
-    } else if (nextRoundNumber === 6) { // Championship
-      // Create championship match from Final Four winners
-      if (currentRoundMatches.length === 2 &&
-          currentRoundMatches[0].winnerId &&
-          currentRoundMatches[1].winnerId) {
-        nextRoundMatches.push({
-          round: nextRoundNumber,
-          region: 'Final',
-          team1Id: currentRoundMatches[0].winnerId,
-          team2Id: currentRoundMatches[1].winnerId
-        });
-      }
+        break;
+        
+      case 5: // Final Four
+        // Generate Final Four matches from Elite 8 winners
+        const feeds = round5Feeds['1'];
+        if (!feeds) break;
+
+        const [feed1, feed2] = feeds;
+        
+        // Find the corresponding Elite 8 matches
+        const match1 = currentRoundMatches.find(m => m.bracketPosition === feed1);
+        const match2 = currentRoundMatches.find(m => m.bracketPosition === feed2);
+
+        if (match1?.winnerId && match2?.winnerId) {
+          nextRoundMatches.push({
+            round: nextRoundNumber,
+            region: 'National',
+            team1Id: match1.winnerId,
+            team2Id: match2.winnerId,
+            bracketPosition: 'N51'
+          });
+        }
+
+        // Second Final Four match
+        const feeds2 = round5Feeds['2'];
+        if (!feeds2) break;
+
+        const [feed3, feed4] = feeds2;
+        
+        // Find the corresponding Elite 8 matches
+        const match3 = currentRoundMatches.find(m => m.bracketPosition === feed3);
+        const match4 = currentRoundMatches.find(m => m.bracketPosition === feed4);
+
+        if (match3?.winnerId && match4?.winnerId) {
+          nextRoundMatches.push({
+            round: nextRoundNumber,
+            region: 'National',
+            team1Id: match3.winnerId,
+            team2Id: match4.winnerId,
+            bracketPosition: 'N52'
+          });
+        }
+        break;
+        
+      case 6: // Championship
+        // Generate Championship match from Final Four winners
+        const championshipMatch1 = currentRoundMatches.find(m => m.bracketPosition === 'N51');
+        const championshipMatch2 = currentRoundMatches.find(m => m.bracketPosition === 'N52');
+
+        if (championshipMatch1?.winnerId && championshipMatch2?.winnerId) {
+          nextRoundMatches.push({
+            round: nextRoundNumber,
+            region: 'National',
+            team1Id: championshipMatch1.winnerId,
+            team2Id: championshipMatch2.winnerId,
+            bracketPosition: 'N61'
+          });
+        }
+        break;
     }
     
     if (nextRoundMatches.length === 0) {

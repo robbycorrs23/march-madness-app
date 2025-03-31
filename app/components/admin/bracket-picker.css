@@ -350,12 +350,39 @@
 /* Add these styles to your bracket-picker.css file */
 
 .bracket-tournament-status {
-  background-color: #f8f9fa;
-  padding: 10px 15px;
-  border-radius: 4px;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-  border-left: 4px solid #3498db;
+  background-color: #f7fafc;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+}
+
+.bracket-success-message {
+  color: #276749;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease-in;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .bracket-warning-message {

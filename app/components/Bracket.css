@@ -75,6 +75,44 @@ header li span {
   grid-auto-flow: column;
 }
 
+.region-label {
+  position: absolute;
+  background-color: #053e61;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.region-1 .region-label {
+  left: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.region-2 .region-label {
+  left: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.region-3 .region-label {
+  right: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.region-4 .region-label {
+  right: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .region-1 {
   grid-column: 1 / span 4;
   grid-row: 1 / span 47;
@@ -82,7 +120,7 @@ header li span {
 
 .final-four {
   grid-column: 4 / span 3;
-  grid-row: 45 / span 6;
+  grid-row: 48 / span 6;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(6, 8px);
@@ -98,7 +136,7 @@ header li span {
 
 .region-2 {
   grid-column: 1 / span 4;
-  grid-row: 49 / span 47;
+  grid-row: 54 / span 47;
 }
 
 .region-3 {
@@ -108,7 +146,7 @@ header li span {
 
 .region-4 {
   grid-column: -5 / span 4;
-  grid-row: 49 / span 47;
+  grid-row: 54 / span 47;
 }
 
 .matchup {
@@ -124,6 +162,7 @@ header li span {
   line-height: 18px;
   padding: 0 5px;
   margin: 0;
+  list-style-type: none;
 }
 
 .team-top {
@@ -182,7 +221,7 @@ header li span {
 .matchup-62 { grid-column: 3 / span 1; grid-row: 2 / span 4; }
 
 /* Championship */
-.championship {
+.matchup-63 {
   grid-column: 2 / span 1;
   grid-row: 1 / span 4;
 }
@@ -195,4 +234,57 @@ header li span {
 .bracket > .region > .matchup > .team,
 .bracket > .final-four > .matchup > .team {
   color: #000;
+}
+
+/* Position indicators */
+.matchup[data-position]::before {
+  content: attr(data-position);
+  position: absolute;
+  left: -25px;
+  font-size: 7px;
+  color: #666;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.matchup[data-seeds]::after {
+  content: attr(data-seeds);
+  position: absolute;
+  right: -30px;
+  font-size: 8px;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* Remove all other position-related CSS */
+.pos-E11::before, .pos-W11::before, .pos-S11::before, .pos-M11::before,
+.pos-E12::before, .pos-W12::before, .pos-S12::before, .pos-M12::before,
+.pos-E13::before, .pos-W13::before, .pos-S13::before, .pos-M13::before,
+.pos-E14::before, .pos-W14::before, .pos-S14::before, .pos-M14::before,
+.pos-E15::before, .pos-W15::before, .pos-S15::before, .pos-M15::before,
+.pos-E16::before, .pos-W16::before, .pos-S16::before, .pos-M16::before,
+.pos-E17::before, .pos-W17::before, .pos-S17::before, .pos-M17::before,
+.pos-E18::before, .pos-W18::before, .pos-S18::before, .pos-M18::before,
+.pos-E21::before, .pos-W21::before, .pos-S21::before, .pos-M21::before,
+.pos-E22::before, .pos-W22::before, .pos-S22::before, .pos-M22::before,
+.pos-E23::before, .pos-W23::before, .pos-S23::before, .pos-M23::before,
+.pos-E24::before, .pos-W24::before, .pos-S24::before, .pos-M24::before,
+.pos-E31::before, .pos-W31::before, .pos-S31::before, .pos-M31::before,
+.pos-E32::before, .pos-W32::before, .pos-S32::before, .pos-M32::before,
+.pos-E41::before, .pos-W41::before, .pos-S41::before, .pos-M41::before,
+.pos-N51::before, .pos-N52::before, .pos-N61::before {
+  display: none;
+}
+
+/* Responsive styling */
+@media (max-width: 1200px) {
+  .bracket {
+    min-width: 1000px;
+  }
+}
+
+@media (max-width: 768px) {
+  header ol li {
+    font-size: 10px;
+  }
 } 
