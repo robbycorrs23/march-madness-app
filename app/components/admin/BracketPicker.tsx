@@ -100,18 +100,26 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
   
   // Group matches by round and region
   const matchesByRound = matches.reduce((acc, match) => {
-    if (!acc[match.round]) {
-      acc[match.round] = [];
+    // Only include matches from current and future rounds
+    const currentRoundNumber = tournament?.currentRound ? roundMap[tournament.currentRound as keyof typeof roundMap] : 0;
+    if (match.round >= currentRoundNumber) {
+      if (!acc[match.round]) {
+        acc[match.round] = [];
+      }
+      acc[match.round].push(match);
     }
-    acc[match.round].push(match);
     return acc;
   }, {} as Record<number, Match[]>);
   
   const matchesByRegion = matches.reduce((acc, match) => {
-    if (!acc[match.region]) {
-      acc[match.region] = [];
+    // Only include matches from current and future rounds
+    const currentRoundNumber = tournament?.currentRound ? roundMap[tournament.currentRound as keyof typeof roundMap] : 0;
+    if (match.round >= currentRoundNumber) {
+      if (!acc[match.region]) {
+        acc[match.region] = [];
+      }
+      acc[match.region].push(match);
     }
-    acc[match.region].push(match);
     return acc;
   }, {} as Record<string, Match[]>);
   
@@ -212,19 +220,44 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
   // Handle team selection for a match with auto-save
   const handleTeamSelect = async (matchId: number, teamId: number) => {
     // Don't allow selection while saving
-    if (savingPickId === matchId) return;
+    if (savingPickId === matchId) {
+      console.log(`Already saving pick for match ${matchId}`);
+      return;
+    }
+    
+    // Find the match to check its round
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {
+      console.error(`Match ${matchId} not found`);
+      return;
+    }
+    
+    // Check if the match is editable
+    if (!isAdmin && !isMatchEditable(match)) {
+      console.log(`Match ${matchId} is not editable`);
+      return;
+    }
     
     // Check if this is a change to an existing pick
     const existingPick = picks.find(pick => pick.matchId === matchId);
     const previousTeamId = existingPick?.teamId;
-    
-    // Find the match to check its round
-    const match = matches.find(m => m.id === matchId);
+    console.log('Current pick state:', {
+      matchId,
+      teamId,
+      existingPick,
+      previousTeamId
+    });
     
     // Check if tournament has started and this match's round is active or past
     const tournamentStarted = tournament?.currentRound !== 'Pre-Tournament';
     const currentRoundNumber = tournament?.currentRound ? roundMap[tournament.currentRound as keyof typeof roundMap] : 0;
     const matchRound = match?.round || 0;
+    console.log('Tournament state:', {
+      tournamentStarted,
+      currentRound: tournament?.currentRound,
+      currentRoundNumber,
+      matchRound
+    });
     
     // Log warning for admin if editing picks after tournament started
     if (isAdmin && tournamentStarted && matchRound <= currentRoundNumber) {
@@ -235,10 +268,13 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
     // Update local state
     const newPicks = [...picks.filter(pick => pick.matchId !== matchId), { matchId, teamId }];
     setPicks(newPicks);
+    console.log('Updated local picks:', newPicks);
     
     // Auto-save this pick
     try {
       setSavingPickId(matchId);
+      console.log(`Saving pick for participant ${participantId}, match ${matchId}, team ${teamId}`);
+      
       const response = await fetch(`/api/participants/${participantId}/match-picks`, {
         method: 'PUT',
         headers: {
@@ -251,8 +287,12 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Failed to save pick:', errorData);
         throw new Error(errorData.error || 'Failed to save pick');
       }
+      
+      const responseData = await response.json();
+      console.log('Pick saved successfully:', responseData);
       
       // Show brief success message
       setSuccess('Pick saved');
@@ -264,6 +304,7 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
       
     } catch (err) {
       // Set error message
+      console.error('Error saving pick:', err);
       setError(err instanceof Error ? err.message : 'Failed to save');
       
       // Revert the pick in local state
@@ -323,8 +364,8 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
     const currentRoundNumber = roundMap[tournament.currentRound as keyof typeof roundMap] || 0;
     const matchRoundNumber = match.round;
     
-    // Only allow editing future rounds
-    return matchRoundNumber > currentRoundNumber;
+    // Allow editing of current round and future rounds
+    return matchRoundNumber >= currentRoundNumber;
   };
   
   // Render a single matchup
@@ -419,6 +460,9 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
   
   // Render desktop view (full bracket)
   const renderDesktopView = () => {
+    // Get current round number
+    const currentRoundNumber = tournament?.currentRound ? roundMap[tournament.currentRound as keyof typeof roundMap] : 0;
+    
     return (
       <div className="bracket-desktop-container">
         <div className="bracket-controls">
@@ -433,16 +477,63 @@ const BracketPicker: React.FC<BracketPickerProps> = ({
               <div key={region} className="bracket-region">
                 <h4 className="bracket-region-title">{region}</h4>
                 <div className="bracket-region-rounds">
-                  {Array.from({ length: maxRound }, (_, i) => i + 1).map(round => (
-                    <div key={round} className="bracket-round-column">
-                      <div className="bracket-round-heading">{getRoundName(round)}</div>
-                      <div className="bracket-round-matches">
-                        {matchesByRound[round]
-                          ?.filter(match => match.region === region)
-                          .map(match => renderMatchup(match))}
+                  {Array.from({ length: maxRound }, (_, i) => i + 1)
+                    .filter(round => round >= currentRoundNumber) // Only show current and future rounds
+                    .map(round => (
+                      <div key={round} className="bracket-round-column">
+                        <div className="bracket-round-heading">{getRoundName(round)}</div>
+                        <div className="bracket-round-matches">
+                          {matchesByRound[round]
+                            ?.filter(match => match.region === region)
+                            .map(match => {
+                              const team1 = getTeamById(match.team1Id);
+                              const team2 = getTeamById(match.team2Id);
+                              const editable = isAdmin || isMatchEditable(match);
+                              
+                              if (!team1 || !team2) return null;
+                              
+                              return (
+                                <div key={match.id} className="bracket-matchup">
+                                  <div className="bracket-matchup-header">
+                                    <span>{match.region}</span>
+                                    <span>{getPointsForRound(match.round)} pts</span>
+                                  </div>
+                                  
+                                  <div 
+                                    className={`bracket-team 
+                                      ${isTeamSelected(match.id, team1.id) ? 'bracket-team-selected' : ''} 
+                                      ${savingPickId === match.id ? 'bracket-team-saving' : ''}
+                                      ${!editable ? 'bracket-team-locked' : ''}`}
+                                    onClick={() => editable && handleTeamSelect(match.id, team1.id)}
+                                  >
+                                    <span className="bracket-seed">{team1.seed}</span>
+                                    <span className="bracket-team-name">{team1.name}</span>
+                                    {match.winnerId === team1.id && <span className="bracket-winner-badge">Winner</span>}
+                                  </div>
+                                  
+                                  <div className="bracket-vs">vs</div>
+                                  
+                                  <div 
+                                    className={`bracket-team 
+                                      ${isTeamSelected(match.id, team2.id) ? 'bracket-team-selected' : ''} 
+                                      ${savingPickId === match.id ? 'bracket-team-saving' : ''}
+                                      ${!editable ? 'bracket-team-locked' : ''}`}
+                                    onClick={() => editable && handleTeamSelect(match.id, team2.id)}
+                                  >
+                                    <span className="bracket-seed">{team2.seed}</span>
+                                    <span className="bracket-team-name">{team2.name}</span>
+                                    {match.winnerId === team2.id && <span className="bracket-winner-badge">Winner</span>}
+                                  </div>
+                                  
+                                  {!editable && !isAdmin && (
+                                    <div className="bracket-lock-indicator">🔒 Locked</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             ))}
