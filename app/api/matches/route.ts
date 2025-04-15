@@ -4,9 +4,10 @@ import { prisma } from '../../../lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get round from query params
+    // Get round and tournamentId from query params
     const { searchParams } = new URL(request.url);
     const roundParam = searchParams.get('round');
+    const tournamentIdParam = searchParams.get('tournamentId');
     
     // Convert round name to round number if provided
     const roundMap: { [key: string]: number } = {
@@ -19,7 +20,30 @@ export async function GET(request: NextRequest) {
     };
     
     // Build where clause based on whether round is specified
-    const where = roundParam ? { round: roundMap[roundParam] } : {};
+    const where: any = {};
+    
+    if (roundParam) {
+      // Check if roundParam is a number or a round name
+      const roundNumber = Number(roundParam);
+      where.round = !isNaN(roundNumber) ? roundNumber : roundMap[roundParam];
+    }
+    
+    if (tournamentIdParam) {
+      // Get all teams for this tournament
+      const teams = await prisma.team.findMany({
+        where: { tournamentId: parseInt(tournamentIdParam) },
+        select: { id: true }
+      });
+      
+      // Get team IDs for this tournament
+      const teamIds = teams.map(team => team.id);
+      
+      // Add team filter to where clause
+      where.OR = [
+        { team1Id: { in: teamIds } },
+        { team2Id: { in: teamIds } }
+      ];
+    }
 
     // Fetch matches
     const matches = await prisma.match.findMany({
@@ -30,7 +54,8 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [
         { round: 'asc' },
-        { region: 'asc' }
+        { region: 'asc' },
+        { bracketPosition: 'asc' }
       ]
     });
 

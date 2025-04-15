@@ -1,5 +1,5 @@
 // @ts-nocheck
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const db = new PrismaClient();
 
@@ -101,22 +101,37 @@ const regionToCode: Record<string, string> = {
   'National': 'N'
 };
 
-// Define which Round 1 matchups feed into each Round 2 matchup
-const round2Feeds: Record<string, [string, string]> = {
-  '1': ['1', '2'],   // Winners of 1/16 vs 8/9
-  '2': ['3', '4'],   // Winners of 5/12 vs 4/13
-  '3': ['5', '6'],   // Winners of 6/11 vs 3/14
-  '4': ['7', '8']    // Winners of 7/10 vs 2/15
+// Define which positions feed into each next round position
+const roundFeeds: Record<number, Record<string, [string, string]>> = {
+  2: {
+    '1': ['1', '2'],   // Winners of 1/16 vs 8/9
+    '2': ['3', '4'],   // Winners of 5/12 vs 4/13
+    '3': ['5', '6'],   // Winners of 6/11 vs 3/14
+    '4': ['7', '8']    // Winners of 7/10 vs 2/15
+  },
+  3: {
+    '1': ['1', '2'],   // Winners of top half
+    '2': ['3', '4']    // Winners of bottom half
+  },
+  4: {
+    '1': ['1', '2']    // Winners of Sweet 16
+  },
+  5: {
+    '1': ['E41', 'W41'], // East and West champs
+    '2': ['S41', 'M41']  // South and Midwest champs
+  },
+  6: {
+    '1': ['N51', 'N52']  // Final Four winners
+  }
 };
 
 async function generateNextRound() {
   try {
     console.log('Generating next round matchups...');
     
-    // Get all completed Round 1 matches
-    const round1Matches = await db.match.findMany({
+    // Get all completed matches
+    const completedMatches = await db.match.findMany({
       where: {
-        round: 1,
         completed: true,
         winnerId: {
           not: null
@@ -128,66 +143,119 @@ async function generateNextRound() {
       }
     });
 
-    console.log(`Found ${round1Matches.length} completed Round 1 matches`);
-
-    // Group Round 1 matches by region
-    const round1ByRegion = round1Matches.reduce((acc: Record<string, Match[]>, match: Match) => {
-      if (!acc[match.region]) {
-        acc[match.region] = [];
+    // Group matches by round
+    const matchesByRound = completedMatches.reduce((acc: Record<number, Match[]>, match: Match) => {
+      if (!acc[match.round]) {
+        acc[match.round] = [];
       }
-      acc[match.region].push(match);
+      acc[match.round].push(match);
       return acc;
     }, {});
 
-    // Generate Round 2 matches for each region
-    for (const [region, matches] of Object.entries(round1ByRegion)) {
-      const regionCode = regionToCode[region];
-      
-      // Create 4 Round 2 matches for each region
-      for (let position = 1; position <= 4; position++) {
-        const feeds = round2Feeds[position.toString()];
-        if (!feeds) continue;
+    // Find the highest completed round
+    const currentRound = Math.max(...Object.keys(matchesByRound).map(Number));
+    const nextRound = currentRound + 1;
 
-        const [feed1, feed2] = feeds;
-        
-        // Find the corresponding Round 1 matches
-        const match1 = matches.find((m: Match) => m.bracketPosition === `${regionCode}1${feed1}`);
-        const match2 = matches.find((m: Match) => m.bracketPosition === `${regionCode}1${feed2}`);
+    if (!roundFeeds[nextRound]) {
+      console.log(`No next round to generate (current round: ${currentRound})`);
+      return;
+    }
+
+    console.log(`Generating Round ${nextRound} matchups from Round ${currentRound} winners`);
+
+    // For regional rounds (1-4), process each region separately
+    if (nextRound <= 4) {
+      // Group current round matches by region
+      const byRegion = matchesByRound[currentRound].reduce((acc: Record<string, Match[]>, match: Match) => {
+        if (!acc[match.region]) {
+          acc[match.region] = [];
+        }
+        acc[match.region].push(match);
+        return acc;
+      }, {});
+
+      // Process each region
+      for (const [region, matches] of Object.entries(byRegion)) {
+        const regionCode = regionToCode[region];
+        const feeds = roundFeeds[nextRound];
+
+        // Create matches for each position in the next round
+        for (const [position, [feed1, feed2]] of Object.entries(feeds)) {
+          const match1 = matches.find(m => m.bracketPosition === `${regionCode}${currentRound}${feed1}`);
+          const match2 = matches.find(m => m.bracketPosition === `${regionCode}${currentRound}${feed2}`);
+
+          if (match1?.winnerId && match2?.winnerId) {
+            const roundMatch = await db.match.create({
+              data: {
+                round: nextRound,
+                region: region,
+                team1Id: match1.winnerId,
+                team2Id: match2.winnerId,
+                completed: false,
+                bracketPosition: `${regionCode}${nextRound}${position}`
+              }
+            });
+
+            console.log(`Created Round ${nextRound} match ${roundMatch.id} in ${region} position ${position}`);
+            console.log(`Teams: ${match1.winnerId} vs ${match2.winnerId}`);
+          } else {
+            console.warn(`Could not find winners for ${region} Round ${nextRound} position ${position}`);
+            if (!match1) {
+              console.warn(`  Missing match for position ${regionCode}${currentRound}${feed1}`);
+            }
+            if (!match2) {
+              console.warn(`  Missing match for position ${regionCode}${currentRound}${feed2}`);
+            }
+            if (match1 && !match1.winnerId) {
+              console.warn(`  No winner set for match ${match1.id} (${regionCode}${currentRound}${feed1})`);
+            }
+            if (match2 && !match2.winnerId) {
+              console.warn(`  No winner set for match ${match2.id} (${regionCode}${currentRound}${feed2})`);
+            }
+          }
+        }
+      }
+    } else {
+      // For national rounds (5-6), process all regions together
+      const feeds = roundFeeds[nextRound];
+      
+      for (const [position, [feed1, feed2]] of Object.entries(feeds)) {
+        const match1 = matchesByRound[currentRound].find(m => m.bracketPosition === feed1);
+        const match2 = matchesByRound[currentRound].find(m => m.bracketPosition === feed2);
 
         if (match1?.winnerId && match2?.winnerId) {
-          // Create the Round 2 match
-          const round2Match = await db.match.create({
+          const roundMatch = await db.match.create({
             data: {
-              round: 2,
-              region: region,
+              round: nextRound,
+              region: 'National',
               team1Id: match1.winnerId,
               team2Id: match2.winnerId,
               completed: false,
-              bracketPosition: `${regionCode}2${position}`
+              bracketPosition: `N${nextRound}${position}`
             }
           });
 
-          console.log(`Created Round 2 match ${round2Match.id} in ${region} position ${position}`);
+          console.log(`Created Round ${nextRound} match ${roundMatch.id} in National position ${position}`);
           console.log(`Teams: ${match1.winnerId} vs ${match2.winnerId}`);
         } else {
-          console.warn(`Could not find winners for ${region} Round 2 position ${position}`);
+          console.warn(`Could not find winners for Round ${nextRound} position ${position}`);
           if (!match1) {
-            console.warn(`  Missing match for position ${regionCode}1${feed1}`);
+            console.warn(`  Missing match for position ${feed1}`);
           }
           if (!match2) {
-            console.warn(`  Missing match for position ${regionCode}1${feed2}`);
+            console.warn(`  Missing match for position ${feed2}`);
           }
           if (match1 && !match1.winnerId) {
-            console.warn(`  No winner set for match ${match1.id} (${regionCode}1${feed1})`);
+            console.warn(`  No winner set for match ${match1.id} (${feed1})`);
           }
           if (match2 && !match2.winnerId) {
-            console.warn(`  No winner set for match ${match2.id} (${regionCode}1${feed2})`);
+            console.warn(`  No winner set for match ${match2.id} (${feed2})`);
           }
         }
       }
     }
 
-    console.log('Successfully generated Round 2 matchups');
+    console.log(`Successfully generated Round ${nextRound} matchups`);
 
   } catch (error) {
     console.error('Error generating next round:', error);

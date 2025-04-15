@@ -113,10 +113,10 @@ const Bracket: React.FC<BracketProps> = ({ matches, teams, currentRound }) => {
       if (round === 2) {
         // Define which Round 1 matchups feed into each Round 2 matchup
         const round2Feeds: Record<string, [string, string]> = {
-          '1': ['13', '14'],  // E21 should be winner of E13 vs winner of E14
-          '2': ['15', '16'],  // E22 should be winner of E15 vs winner of E16
-          '3': ['17', '12'],  // E23 should be winner of E17 vs winner of E12
-          '4': ['11', '18']   // E24 should be winner of E11 vs winner of E18
+          '1': ['1', '2'],   // Winners of 1/16 vs 8/9
+          '2': ['3', '4'],   // Winners of 5/12 vs 4/13
+          '3': ['5', '6'],   // Winners of 6/11 vs 3/14
+          '4': ['7', '8']    // Winners of 7/10 vs 2/15
         };
 
         const feeds = round2Feeds[positionNum.toString()];

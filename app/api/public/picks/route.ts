@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
     // Get round from query params
     const searchParams = request.nextUrl.searchParams;
     const roundName = searchParams.get('round');
+    console.log(`Fetching public picks for round: ${roundName}`);
     
     if (!roundName || !roundMap[roundName as keyof typeof roundMap]) {
+      console.error('Invalid round parameter:', roundName);
       return NextResponse.json(
         { error: 'Valid round parameter is required' },
         { status: 400 }
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
     
     // Convert round name to numeric value for the database query
     const roundNumber = roundMap[roundName as keyof typeof roundMap];
+    console.log(`Round number: ${roundNumber}`);
     
     // Get current tournament to check if it's in progress
     const tournament = await prisma.tournament.findFirst({
@@ -40,11 +43,18 @@ export async function GET(request: NextRequest) {
     });
     
     if (!tournament) {
+      console.error('No active tournament found');
       return NextResponse.json(
         { error: 'No active tournament found' },
         { status: 404 }
       );
     }
+    
+    console.log('Tournament state:', {
+      id: tournament.id,
+      currentRound: tournament.currentRound,
+      showPicks: tournament.currentRound !== 'Pre-Tournament'
+    });
     
     // If tournament is in pre-tournament stage, don't show picks
     if (tournament.currentRound === 'Pre-Tournament') {
@@ -74,6 +84,8 @@ export async function GET(request: NextRequest) {
       }
     });
     
+    console.log(`Found ${matches.length} matches for round ${roundNumber}`);
+    
     // Get all participants (public info only)
     const participants = await prisma.participant.findMany({
       select: {
@@ -82,6 +94,8 @@ export async function GET(request: NextRequest) {
         totalScore: true
       }
     });
+    
+    console.log(`Found ${participants.length} participants`);
     
     // If the tournament hasn't started yet, only return basic data
     if (!showPicks) {
@@ -129,11 +143,15 @@ export async function GET(request: NextRequest) {
       }
     });
     
+    console.log(`Found ${allMatchPicks.length} match picks for round ${roundNumber}`);
+    
     // Format picks by participant for easier consumption
     const picksByParticipant = participants.map(participant => {
       const participantPicks = allMatchPicks.filter(pick => 
         pick.participantId === participant.id
       );
+      
+      console.log(`Participant ${participant.name} has ${participantPicks.length} picks`);
       
       return {
         participantId: participant.id,

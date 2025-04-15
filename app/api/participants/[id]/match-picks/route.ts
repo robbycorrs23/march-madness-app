@@ -69,7 +69,8 @@ export async function PUT(
   try {
     // Check authentication
     const session = await auth();
-    if (!session?.user?.isAdmin) {
+    if (!session?.user) {
+      console.log('Unauthorized attempt to update match picks - no session');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -79,11 +80,14 @@ export async function PUT(
     // Correctly await the params
     const { id } = await params;
     const participantId = parseInt(id);
+    console.log(`Updating match picks for participant ${participantId}`);
     
     // Parse request body
     const data = await request.json();
+    console.log('Received data:', data);
     
     if (!data.picks || !Array.isArray(data.picks)) {
+      console.error('Invalid match picks data:', data);
       return NextResponse.json(
         { error: 'Invalid match picks data' },
         { status: 400 }
@@ -96,6 +100,7 @@ export async function PUT(
     });
     
     if (!participant) {
+      console.error(`Participant ${participantId} not found`);
       return NextResponse.json(
         { error: 'Participant not found' },
         { status: 404 }
@@ -107,6 +112,7 @@ export async function PUT(
       // Handle single pick (auto-save case)
       if (data.picks.length === 1) {
         const pick = data.picks[0];
+        console.log(`Processing single pick for match ${pick.matchId}, team ${pick.teamId}`);
         
         // Check if a pick for this match already exists
         const existingPick = await tx.matchPick.findUnique({
@@ -119,12 +125,14 @@ export async function PUT(
         });
         
         if (existingPick) {
+          console.log(`Updating existing pick ${existingPick.id}`);
           // Update existing pick
           await tx.matchPick.update({
             where: { id: existingPick.id },
             data: { teamId: pick.teamId }
           });
         } else {
+          console.log('Creating new pick');
           // Create new pick
           await tx.matchPick.create({
             data: {
@@ -138,6 +146,7 @@ export async function PUT(
       } else {
         // Bulk update (traditional save case)
         const matchIds = data.picks.map((pick: MatchPick) => pick.matchId);
+        console.log(`Processing bulk update for matches: ${matchIds.join(', ')}`);
         
         // Delete existing picks for these matches
         await tx.matchPick.deleteMany({
@@ -161,6 +170,7 @@ export async function PUT(
       }
     });
     
+    console.log('Successfully updated match picks');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating match picks:', error);

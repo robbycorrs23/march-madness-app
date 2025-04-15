@@ -29,21 +29,21 @@ const regionToCode: Record<string, string> = {
 
 // Define which Round 1 matchups feed into each Round 2 matchup
 const round2Feeds: Record<string, [string, string]> = {
-  '1': ['1', '2'],   // Winners of 1/16 vs 8/9
-  '2': ['3', '4'],   // Winners of 5/12 vs 4/13
-  '3': ['5', '6'],   // Winners of 6/11 vs 3/14
-  '4': ['7', '8']    // Winners of 7/10 vs 2/15
+  '1': ['1', '2'],   // 1/16 vs 8/9
+  '2': ['3', '4'],   // 5/12 vs 4/13
+  '3': ['5', '6'],   // 6/11 vs 3/14
+  '4': ['7', '8']    // 7/10 vs 2/15
 };
 
 // Define which Round 2 matchups feed into each Sweet 16 matchup
 const round3Feeds: Record<string, [string, string]> = {
-  '1': ['1', '2'],   // Top half of region
-  '2': ['3', '4']    // Bottom half of region
+  '1': ['1', '2'],   // Winner of 1/16 vs 8/9 vs Winner of 5/12 vs 4/13
+  '2': ['3', '4']    // Winner of 6/11 vs 3/14 vs Winner of 7/10 vs 2/15
 };
 
 // Define which Sweet 16 matchups feed into each Elite 8 matchup
 const round4Feeds: Record<string, [string, string]> = {
-  '1': ['1', '2']    // Region final
+  '1': ['1', '2']    // Winner of top half vs Winner of bottom half
 };
 
 // Define which Elite 8 matchups feed into each Final Four matchup
@@ -104,7 +104,15 @@ export async function POST(req: NextRequest) {
     const currentRoundMatches = await prisma.match.findMany({
       where: {
         round: currentRoundNumber,
-        winnerId: { not: null }
+        winnerId: { not: null },
+        OR: [
+          { team1: { tournamentId } },
+          { team2: { tournamentId } }
+        ]
+      },
+      include: {
+        team1: true,
+        team2: true
       },
       orderBy: [
         { region: 'asc' },
@@ -115,6 +123,24 @@ export async function POST(req: NextRequest) {
     if (currentRoundMatches.length === 0) {
       return NextResponse.json(
         { error: 'No matches with winners found for the current round' },
+        { status: 400 }
+      );
+    }
+
+    // Check if next round matches already exist
+    const existingNextRoundMatches = await prisma.match.findMany({
+      where: {
+        round: nextRoundNumber,
+        OR: [
+          { team1: { tournamentId } },
+          { team2: { tournamentId } }
+        ]
+      }
+    });
+
+    if (existingNextRoundMatches.length > 0) {
+      return NextResponse.json(
+        { error: 'Next round matches already exist' },
         { status: 400 }
       );
     }
@@ -155,8 +181,23 @@ export async function POST(req: NextRequest) {
                 region: region,
                 team1Id: match1.winnerId,
                 team2Id: match2.winnerId,
-                bracketPosition: `${regionCode}2${position}`
+                bracketPosition: `${regionCode}2${position}`,
+                completed: false
               });
+            } else {
+              console.warn(`Could not find winners for ${region} Round 2 position ${position}`);
+              if (!match1) {
+                console.warn(`  Missing match for position ${regionCode}1${feed1}`);
+              }
+              if (!match2) {
+                console.warn(`  Missing match for position ${regionCode}1${feed2}`);
+              }
+              if (match1 && !match1.winnerId) {
+                console.warn(`  No winner set for match ${match1.id} (${regionCode}1${feed1})`);
+              }
+              if (match2 && !match2.winnerId) {
+                console.warn(`  No winner set for match ${match2.id} (${regionCode}1${feed2})`);
+              }
             }
           }
         }
@@ -184,7 +225,8 @@ export async function POST(req: NextRequest) {
                 region: region,
                 team1Id: match1.winnerId,
                 team2Id: match2.winnerId,
-                bracketPosition: `${regionCode}3${position}`
+                bracketPosition: `${regionCode}3${position}`,
+                completed: false
               });
             }
           }
@@ -212,7 +254,8 @@ export async function POST(req: NextRequest) {
               region: region,
               team1Id: match1.winnerId,
               team2Id: match2.winnerId,
-              bracketPosition: `${regionCode}41`
+              bracketPosition: `${regionCode}41`,
+              completed: false
             });
           }
         }
@@ -235,7 +278,8 @@ export async function POST(req: NextRequest) {
             region: 'National',
             team1Id: match1.winnerId,
             team2Id: match2.winnerId,
-            bracketPosition: 'N51'
+            bracketPosition: 'N51',
+            completed: false
           });
         }
 
@@ -255,7 +299,8 @@ export async function POST(req: NextRequest) {
             region: 'National',
             team1Id: match3.winnerId,
             team2Id: match4.winnerId,
-            bracketPosition: 'N52'
+            bracketPosition: 'N52',
+            completed: false
           });
         }
         break;
@@ -271,7 +316,8 @@ export async function POST(req: NextRequest) {
             region: 'National',
             team1Id: championshipMatch1.winnerId,
             team2Id: championshipMatch2.winnerId,
-            bracketPosition: 'N61'
+            bracketPosition: 'N61',
+            completed: false
           });
         }
         break;
@@ -290,7 +336,8 @@ export async function POST(req: NextRequest) {
     });
     
     return NextResponse.json({
-      message: `Created ${createdMatches.count} matches for the ${nextRound}`
+      message: `Created ${createdMatches.count} matches for the ${nextRound}`,
+      currentRound: nextRound
     });
   } catch (error) {
     console.error('Error generating next round:', error);

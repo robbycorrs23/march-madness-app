@@ -4,6 +4,9 @@
   background-color: white;
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-width: 1200px;
+  margin: 0 auto;
+  overflow-x: auto;
 }
 
 .game-management-title {
@@ -138,36 +141,34 @@
 
 .game-management-matches-table-container {
   overflow-x: auto;
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
 }
 
 .game-management-matches-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
+  min-width: 800px;
 }
 
 .game-management-matches-table thead {
   background-color: #f7fafc;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .game-management-matches-table th {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1rem;
   text-align: left;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
+  font-weight: 600;
   color: #4a5568;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.game-management-matches-table tbody tr {
-  background-color: white;
-  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .game-management-matches-table td {
-  padding: 1rem 1.5rem;
-  white-space: nowrap;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
 }
 
 .game-management-team-info {
@@ -186,6 +187,10 @@
   margin-right: 0.5rem;
   font-size: 0.75rem;
   font-weight: bold;
+}
+
+.winner>.game-management-team-info>.game-management-team-seed {
+  color: #000;
 }
 
 .game-management-actions-container {
@@ -290,6 +295,7 @@
 .game-management-team-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: #f7fafc;
 }
 
 .game-management-team-button .game-management-team-info {
@@ -302,4 +308,64 @@
   min-width: 24px;
   text-align: center;
   font-weight: 600;
+}
+
+.game-management-round-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.game-management-round-tab {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background-color: white;
+  color: #4a5568;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.game-management-round-tab:hover:not(:disabled) {
+  background-color: #f7fafc;
+  border-color: #cbd5e0;
+}
+
+.game-management-round-tab-active {
+  background-color: #0A6FAC;
+  color: white;
+  border-color: #0A6FAC;
+}
+
+.game-management-round-tab:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f7fafc;
+}
+
+.game-management-round-tab-active:disabled {
+  background-color: #0A6FAC;
+  opacity: 1;
+}
+
+.game-management-score-input:disabled {
+  background-color: #f7fafc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.game-management-region-section {
+  margin-bottom: 2rem;
+}
+
+.game-management-region-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
 }

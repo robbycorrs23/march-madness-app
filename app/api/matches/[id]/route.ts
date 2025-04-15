@@ -242,7 +242,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
     const session = await auth();
     if (!session?.user?.isAdmin) {
       return NextResponse.json(
@@ -250,22 +249,19 @@ export async function PATCH(
         { status: 401 }
       );
     }
+
+    const { id } = await params;
+    const matchId = parseInt(id);
+    const data = await request.json();
     
-    // Parse match ID from params
-    const resolvedParams = await params;
-    const matchId = parseInt(resolvedParams.id);
+    console.log(`Updating match ${matchId} with data:`, data);
     
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const forceRecalculate = searchParams.get('forceRecalculate') === 'true';
-    
-    // Get the match before updating
+    // Get existing match
     const existingMatch = await prisma.match.findUnique({
       where: { id: matchId },
-      select: { 
-        winnerId: true, 
-        completed: true,
-        round: true
+      include: {
+        team1: true,
+        team2: true
       }
     });
     
@@ -276,31 +272,43 @@ export async function PATCH(
       );
     }
     
-    // Parse request body - now we accept partial updates
-    const data = await request.json();
-    const { winnerId, team1Score, team2Score, completed } = data;
-    
-    // Build update object with only provided fields
+    console.log(`Existing match:`, {
+      id: existingMatch.id,
+      round: existingMatch.round,
+      region: existingMatch.region,
+      bracketPosition: existingMatch.bracketPosition,
+      team1: existingMatch.team1,
+      team2: existingMatch.team2,
+      winnerId: existingMatch.winnerId,
+      completed: existingMatch.completed
+    });
+
+    // Extract fields from request data
+    const { 
+      winnerId, 
+      completed, 
+      team1Score, 
+      team2Score,
+      forceRecalculate 
+    } = data;
+
+    // Build update object
     const updateData: any = {};
     
     if (winnerId !== undefined) {
       updateData.winnerId = winnerId;
-      updateData.completed = true;
     }
-    
-    if (team1Score !== undefined) {
-      updateData.team1Score = team1Score;
-    }
-    
-    if (team2Score !== undefined) {
-      updateData.team2Score = team2Score;
-    }
-    
     if (completed !== undefined) {
       updateData.completed = completed;
     }
-    
-    // Update match in the database
+    if (team1Score !== undefined) {
+      updateData.team1Score = team1Score;
+    }
+    if (team2Score !== undefined) {
+      updateData.team2Score = team2Score;
+    }
+
+    // Update match
     const updatedMatch = await prisma.match.update({
       where: { id: matchId },
       data: updateData,
@@ -308,6 +316,17 @@ export async function PATCH(
         team1: true,
         team2: true
       }
+    });
+
+    console.log(`Updated match:`, {
+      id: updatedMatch.id,
+      round: updatedMatch.round,
+      region: updatedMatch.region,
+      bracketPosition: updatedMatch.bracketPosition,
+      team1: updatedMatch.team1,
+      team2: updatedMatch.team2,
+      winnerId: updatedMatch.winnerId,
+      completed: updatedMatch.completed
     });
     
     // Calculate scores if a winner is set and match is completed or force recalculate is true
@@ -351,10 +370,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating match:', error);
     return NextResponse.json(
-      { 
-        error: 'Failed to update match',
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: 'Failed to update match' },
       { status: 500 }
     );
   }

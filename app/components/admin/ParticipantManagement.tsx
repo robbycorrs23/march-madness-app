@@ -106,27 +106,6 @@ const ParticipantManagement: React.FC<ParticipantManagementProps> = ({
       </div>
       
       <div className="admin-grid-cols-2 admin-mb-6" style={{ marginTop: '1.5rem' }}>
-        <div className="admin-card">
-          <div className="admin-card-header">Payment Statistics</div>
-          <div className="admin-card-body">
-            <div className="admin-mb-4">
-              <h4 className="admin-mb-2 admin-font-bold">Payment Status</h4>
-              <ul>
-                <li>Paid: {participants.filter(p => p.paid).length}</li>
-                <li>Unpaid: {participants.filter(p => !p.paid).length}</li>
-                <li>Total: {participants.length}</li>
-              </ul>
-            </div>
-            
-            <button 
-              className="admin-btn admin-btn-blue"
-              onClick={sendPaymentReminders}
-              disabled={isSendingReminders || participants.filter(p => !p.paid).length === 0}
-            >
-              {isSendingReminders ? 'Sending...' : 'Send Payment Reminders'}
-            </button>
-          </div>
-        </div>
         
         <div className="admin-card">
           <div className="admin-card-header">Participant Actions</div>

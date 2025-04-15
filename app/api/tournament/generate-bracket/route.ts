@@ -20,6 +20,7 @@ type BracketEntry = {
   team1Id: number;
   team2Id: number;
   winnerId: number | null;
+  bracketPosition: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -54,24 +55,37 @@ export async function POST(request: NextRequest) {
       teamsByRegion[team.region].push(team);
     });
 
+    // Map region names to region codes
+    const regionToCode: Record<string, string> = {
+      'East': 'E',
+      'West': 'W',
+      'South': 'S',
+      'Midwest': 'M'
+    };
+
     // Generate bracket logic
     const bracketEntries: BracketEntry[] = [];
 
     // Iterate through regions to create bracket entries
     for (const region of Object.keys(teamsByRegion)) {
       const regionTeams = teamsByRegion[region];
+      const regionCode = regionToCode[region];
       
       // Create matchups for the region
       for (let i = 0; i < regionTeams.length / 2; i++) {
         const team1 = regionTeams[i];
         const team2 = regionTeams[regionTeams.length - 1 - i];
         
+        // Set bracket position based on seed matchup
+        const bracketPosition = `${regionCode}1${i + 1}`;
+        
         bracketEntries.push({
           round: 1,
           region: region,
           team1Id: team1.id,
           team2Id: team2.id,
-          winnerId: null
+          winnerId: null,
+          bracketPosition: bracketPosition
         });
       }
     }

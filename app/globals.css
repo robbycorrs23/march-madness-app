@@ -18,3 +18,249 @@ body {
     text-wrap: balance;
   }
 }
+
+/* General Admin Styles */
+.admin-select,
+.game-management-round-dropdown {
+  display: block; /* Ensure it takes full width like other inputs */
+  width: 100%; /* Match other form inputs */
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #495057; /* Standard text color */
+  background-color: #fff; /* White background */
+  background-clip: padding-box;
+  border: 1px solid #ced4da; /* Standard border */
+  border-radius: 0.375rem; /* Slightly rounded corners */
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  appearance: none; /* Remove default OS styling */
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="none" stroke="%23343a40" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m2 5 6 6 6-6"/></svg>'); /* Custom dropdown arrow */
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+}
+
+.admin-select:focus,
+.game-management-round-dropdown:focus {
+  border-color: #86b7fe; /* Highlight color on focus */
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); /* Focus shadow like Bootstrap */
+}
+
+.admin-select:disabled,
+.game-management-round-dropdown:disabled {
+  background-color: #e9ecef; /* Disabled background color */
+  opacity: 0.7; /* Slightly faded */
+  cursor: not-allowed;
+}
+
+/* Style the label for the Game Management dropdown */
+.game-management-round-label {
+  display: block;
+  margin-bottom: 0.5rem; /* Space below label */
+  font-weight: 500;
+}
+
+/* Container for the Game Management dropdown */
+.game-management-round-selector {
+  margin-bottom: 1rem; /* Space below the dropdown */
+}
+
+/* --- Mobile Action Hub Styles --- */
+
+.admin-hub-container {
+  padding: 1rem; /* Add padding around the whole container */
+  max-width: 600px; /* Max width for mobile focus, centers on larger screens */
+  margin: 1rem auto; /* Center container on larger screens */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem; /* Space between hub elements */
+}
+
+.admin-hub-banner {
+  background: linear-gradient(135deg, #0A6FAC, #033c6a); /* Example gradient */
+  color: white;
+  padding: 1.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.admin-hub-banner h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.admin-hub-current-round {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.admin-hub-current-round strong {
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 0.1em 0.4em;
+  border-radius: 0.25rem;
+}
+
+.admin-hub-scheduled-info {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-top: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  display: inline-block; /* Fit content */
+}
+
+.admin-hub-status-advancing {
+  font-style: italic;
+  color: #ffc107; /* Example warning color */
+  margin-top: 0.5rem;
+}
+
+.admin-hub-card {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.admin-hub-card h2,
+.admin-hub-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748; /* Darker heading */
+}
+
+.admin-hub-primary-action h2 {
+  border-bottom: 2px solid #0A6FAC; /* Accent border */
+  padding-bottom: 0.5rem;
+}
+
+/* Style the expand/collapse button */
+.admin-btn-primary.admin-btn-lg {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  font-size: 1.1rem;
+}
+
+.admin-btn-secondary.admin-mb-4 {
+  margin-bottom: 1.5rem; /* More space */
+}
+
+.admin-hub-set-round-actions {
+  display: flex;
+  flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+  gap: 0.75rem; /* Space between buttons */
+  margin-top: 1rem;
+}
+
+/* Ensure form group elements have good spacing */
+.admin-form-group.admin-mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+.admin-form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+/* Warning box styling */
+.admin-warning-box {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 1rem;
+  border-radius: 0.375rem;
+}
+
+.admin-warning-box h3 {
+  color: #92400e;
+  margin-bottom: 0.5rem;
+}
+
+.admin-warning-box p {
+  margin-bottom: 0.5rem;
+}
+
+.admin-warning-box button {
+  margin-left: 0.5rem;
+  margin-top: 0.5rem; /* Add space if wraps */
+}
+
+.admin-hub-fab {
+  position: fixed; /* Stick to the viewport */
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 56px; /* Standard FAB size */
+  height: 56px;
+  border-radius: 50%; /* Make it circular */
+  font-size: 0.8rem; /* Smaller text for Calc Scores */
+  padding: 0; /* Remove default padding */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000; /* Ensure it's above other content */
+  /* Use accent color - define --admin-accent-color if needed, or use direct color */
+  /* background-color: var(--admin-accent-color, #dc3545); */
+  /* color: white; */
+  /* border: none; */
+}
+
+.admin-hub-fab:hover {
+  /* background-color: darken(var(--admin-accent-color, #dc3545), 10%); */
+  opacity: 0.9;
+}
+
+.admin-hub-fab:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Refine button spacing */
+.admin-actions-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+/* Adjust dropdown style added previously if needed */
+.admin-select,
+.game-management-round-dropdown {
+  /* Existing styles should be mostly fine */
+  margin-bottom: 0; /* Remove margin if inside a form-group that already has it */
+}
+
+/* --- END Mobile Action Hub Styles --- */
+
+/* --- Add this at the end of the Mobile Action Hub Styles --- */
+
+@media (min-width: 768px) { /* Apply styles for tablets and wider */
+  .admin-hub-container {
+    max-width: 960px; /* Allow container to be wider */
+    /* Optionally, could introduce columns here later if needed */
+  }
+
+  .admin-hub-set-round-actions {
+    /* Maybe prevent wrapping on larger screens if desired */
+    /* flex-wrap: nowrap; */
+  }
+
+  /* Make the primary action button less wide */
+  .admin-btn-primary.admin-btn-lg {
+    width: auto; /* Allow button to size to content */
+    padding: 0.8rem 1.5rem; /* Adjust padding if needed */
+  }
+}
+
+/* --- END Responsive Adjustments --- */

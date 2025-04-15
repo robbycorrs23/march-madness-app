@@ -1,5 +1,5 @@
 // @ts-nocheck
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '../node_modules/@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +36,14 @@ const regionToCode: Record<string, string> = {
   'National': 'N'
 };
 
+// Define which Round 1 positions feed into each Round 2 position
+const round2PositionMap: Record<number, [number, number]> = {
+  1: [1, 2],    // Position 1 gets winners from R1 positions 1 and 2 (1/16 vs 8/9)
+  2: [3, 4],    // Position 2 gets winners from R1 positions 3 and 4 (5/12 vs 4/13)
+  3: [5, 6],    // Position 3 gets winners from R1 positions 5 and 6 (6/11 vs 3/14)
+  4: [7, 8]     // Position 4 gets winners from R1 positions 7 and 8 (7/10 vs 2/15)
+};
+
 // Get position for Round 1 match based on seeds
 function getPositionForRound1Match(match: MatchWithTeams): number {
   if (!match.team1 || !match.team2) return 0;
@@ -54,6 +62,30 @@ function getPositionForRound1Match(match: MatchWithTeams): number {
   if ((seed1 === 2 && seed2 === 15) || (seed1 === 15 && seed2 === 2)) return 8;
   
   return 0; // Invalid position
+}
+
+// Get position for Round 2 match based on team seeds and previous matches
+function getPositionForRound2Match(match: MatchWithTeams, round1Matches: MatchWithTeams[]): number {
+  if (!match.team1Id || !match.team2Id) return 0;
+  
+  // Find the Round 1 matches that these teams won
+  const team1Round1Match = round1Matches.find(m => m.winnerId === match.team1Id);
+  const team2Round1Match = round1Matches.find(m => m.winnerId === match.team2Id);
+  
+  if (!team1Round1Match || !team2Round1Match) return 0;
+  
+  // Get their Round 1 positions
+  const pos1 = getPositionForRound1Match(team1Round1Match);
+  const pos2 = getPositionForRound1Match(team2Round1Match);
+  
+  // Find which Round 2 position these feed into
+  for (const [r2pos, [r1pos1, r1pos2]] of Object.entries(round2PositionMap)) {
+    if ((pos1 === r1pos1 && pos2 === r1pos2) || (pos1 === r1pos2 && pos2 === r1pos1)) {
+      return parseInt(r2pos);
+    }
+  }
+  
+  return 0;
 }
 
 async function updateBracketPositions() {
@@ -109,11 +141,11 @@ async function updateBracketPositions() {
       }
     }
     
-    // Process Round 2 matches - 4 positions per region
+    // Process Round 2 matches - positions based on advancement pattern
     if (matchesByRound[2]) {
       console.log(`Processing ${matchesByRound[2].length} Round 2 matches`);
       
-      // Group by region first
+      // Group Round 2 matches by region
       const byRegion = matchesByRound[2].reduce((acc: Record<string, MatchWithTeams[]>, match: MatchWithTeams) => {
         if (!acc[match.region]) {
           acc[match.region] = [];
@@ -122,29 +154,30 @@ async function updateBracketPositions() {
         return acc;
       }, {});
       
-      // Each region should have 4 matches, assign positions 1-4
-      for (const [region, regionMatches] of Object.entries(byRegion) as [string, MatchWithTeams[]][]) {
+      // Process each region
+      for (const [region, regionMatches] of Object.entries(byRegion)) {
         const regionCode = regionToCode[region];
         
-        // The standard ordering for Round 2 is:
-        // Position 1: Winners of seed matches 1/16 vs 8/9
-        // Position 2: Winners of seed matches 5/12 vs 4/13
-        // Position 3: Winners of seed matches 6/11 vs 3/14
-        // Position 4: Winners of seed matches 7/10 vs 2/15
+        // Get Round 1 matches for this region
+        const round1RegionMatches = matchesByRound[1].filter(m => m.region === region);
         
-        for (let i = 0; i < regionMatches.length; i++) {
-          const match = regionMatches[i];
-          const positionNumber = i + 1;
-          const bracketPosition = `${regionCode}2${positionNumber}`;
+        // Process each Round 2 match
+        for (const match of regionMatches) {
+          const position = getPositionForRound2Match(match, round1RegionMatches);
           
-          console.log(`Match ${match.id}: ${match.region} - Setting position to ${bracketPosition}`);
-          
-          updates.push(
-            prisma.match.update({
-              where: { id: match.id },
-              data: { bracketPosition }
-            })
-          );
+          if (position > 0) {
+            const bracketPosition = `${regionCode}2${position}`;
+            console.log(`Match ${match.id}: ${match.region} - Setting position to ${bracketPosition}`);
+            
+            updates.push(
+              prisma.match.update({
+                where: { id: match.id },
+                data: { bracketPosition }
+              })
+            );
+          } else {
+            console.warn(`Could not determine position for Round 2 match ${match.id}`);
+          }
         }
       }
     }
